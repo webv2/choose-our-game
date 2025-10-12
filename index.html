@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Choose Our Game</title>
-    
-    <!-- This is the fix for the favicon -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="light-theme">
@@ -35,24 +32,15 @@
                     <label for="search-bar">Search Game:</label>
                     <input type="text" id="search-bar" placeholder="E.g., Baldur's Gate 3">
                 </div>
-                <!-- New Date Filter Structure -->
                 <div class="filter-group">
                     <label>Release Date:</label>
                     <div id="date-filter-container" class="custom-dropdown-container">
                         <button id="date-filter-btn" class="custom-dropdown-btn">Any Date</button>
                         <div id="date-filter-panel" class="custom-dropdown-panel hidden">
-                            <div class="date-ranges">
-                                <ul id="date-ranges-list">
-                                    <!-- Populated by JS -->
-                                </ul>
-                            </div>
+                            <div class="date-ranges"><ul id="date-ranges-list"></ul></div>
                             <div class="date-years">
-                                <ul id="date-years-list">
-                                    <!-- Populated by JS -->
-                                </ul>
-                                <div class="date-actions">
-                                    <button id="date-select-all-btn">Select All</button>
-                                </div>
+                                <ul id="date-years-list"></ul>
+                                <div class="date-actions"><button id="date-select-all-btn">Select All</button></div>
                             </div>
                         </div>
                     </div>
@@ -72,9 +60,7 @@
                 </div>
                 <div class="filter-group">
                     <label for="genre-filter">Genre:</label>
-                    <select id="genre-filter">
-                        <option value="">All Genres</option>
-                    </select>
+                    <select id="genre-filter"><option value="">All Genres</option></select>
                 </div>
                 <div class="filter-group">
                     <label for="tags-filter">Mode:</label>
@@ -94,6 +80,9 @@
         <div id="games-container" class="games-container"></div>
         <div id="loader" class="loader"></div>
     </main>
+
+    <!-- Back to Top Button -->
+    <button id="back-to-top-btn" title="Go to top">↑</button>
 
     <!-- Animated Modal -->
     <div id="modal-overlay" class="modal-overlay">
