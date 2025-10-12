@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	   // --- PASTE YOUR SUPABASE CREDENTIALS HERE ---
     const SUPABASE_URL = 'https://lgtajqxzcgutovcqwepe.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGFqcXh6Y2d1dG92Y3F3ZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDg3NjIsImV4cCI6MjA3NTc4NDc2Mn0.QKnnpZ4fHrgpSeCeyJ2qVOJUqafd3jxRF4j5uMenMbg';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     // --- ELEMENT SELECTORS ---
     const gamesContainer = document.getElementById('games-container');
@@ -40,12 +40,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- STATE VARIABLES ---
 	let voteCounts = new Map(); // Stores gameId -> voteCount
-    let localVotes = new Set(); // Tracks what this user has voted for
+    let localVotes = new Set(JSON.parse(localStorage.getItem('myLocalVotes')) || []); // Tracks what this user has voted for
+    let currentPage = 1,
+        isLoading = false,
+        hasNextPage = true;
     let originalTile = null,
         votedGames = new Set(),
         importedVotes = {},
-        currentPage = 1,
-        isLoading = false,
         hasNextPage = true,
         selectedYears = new Set();
 		
