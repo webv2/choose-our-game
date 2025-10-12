@@ -97,7 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
         "red orchestra 2: heroes of stalingrad", "left 4 dead 2", "dota 2", "dirt 3"
     ]);
 
-    // DOM Elements
     const gamesContainer = document.getElementById('games-container');
     const loader = document.getElementById('loader');
     const genreFilter = document.getElementById('genre-filter');
@@ -114,17 +113,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBody = document.getElementById('modal-body');
     const closeModalBtn = document.querySelector('.close-button');
 
-    // State variables
     let votedGames = new Set();
     let importedVotes = {};
     let currentPage = 1;
     let isLoading = false;
     let hasNextPage = true;
 
-    // --- Core API Functions ---
+    // --- NEW Function to handle loading more games if content is not scrollable ---
+    const checkAndLoadMore = () => {
+        if (isLoading || !hasNextPage) return;
+
+        const isLibraryFilterActive = libraryToggleBtn.dataset.toggled === 'true';
+        const isContentScrollable = document.documentElement.scrollHeight > document.documentElement.clientHeight;
+
+        if (isLibraryFilterActive && !isContentScrollable) {
+            currentPage++;
+            fetchGames(currentPage, true);
+        }
+    };
 
     const fetchGames = async (page = 1, append = false) => {
-        if (isLoading || !hasNextPage && append) return;
+        if (isLoading || (!hasNextPage && append)) return;
         isLoading = true;
         showLoader();
 
@@ -150,6 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             hideLoader();
             isLoading = false;
+            // After loading, check if we need to load even more.
+            checkAndLoadMore();
         }
     };
 
@@ -182,14 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- Display & UI Functions ---
-
     const displayGames = (games, append) => {
         if (!append) gamesContainer.innerHTML = '';
         if (games.length === 0 && !append) {
             gamesContainer.innerHTML = '<p>No games found matching your criteria.</p>';
             return;
         }
+        const fragment = document.createDocumentFragment();
         games.forEach(game => {
             const gameTile = document.createElement('div');
             const isOwned = mySteamLibrary.has(game.name.toLowerCase().trim());
@@ -209,17 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             
             gameTile.querySelector('img').addEventListener('click', () => openModal(game.id));
-            if (append) gamesContainer.appendChild(gameTile);
-            else gamesContainer.innerHTML += gameTile.outerHTML; // Less performant but simpler for this context
+            fragment.appendChild(gameTile);
         });
-
-        // Re-attach event listeners if not appending
-        if (!append) {
-             gamesContainer.querySelectorAll('.game-tile img').forEach(img => {
-                const gameId = img.closest('.game-tile').dataset.gameId;
-                img.addEventListener('click', () => openModal(gameId));
-            });
-        }
+        gamesContainer.appendChild(fragment);
     };
 
     const displayGameDetails = (details, screenshots) => {
@@ -244,11 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- Event Handlers ---
-
     function applyFilters() {
         currentPage = 1;
-        hasNextPage = true; // Reset for new search
+        hasNextPage = true;
         fetchGames(currentPage, false);
     }
 
@@ -267,6 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const isToggled = libraryToggleBtn.dataset.toggled === 'true';
         libraryToggleBtn.dataset.toggled = !isToggled;
         gamesContainer.classList.toggle('filter-library', !isToggled);
+        // After toggling, check if we need to load more games
+        checkAndLoadMore();
     });
 
     let searchTimeout;
@@ -280,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleFiltersBtn.textContent = filtersPanel.classList.contains('hidden') ? 'Show Filters' : 'Hide Filters';
     });
     
-    // Infinite Scroll
     window.addEventListener('scroll', () => {
         if (isLoading || !hasNextPage) return;
         if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500) {
@@ -289,7 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Import/Export and other buttons...
     shareBtn.addEventListener('click', () => {
         if (votedGames.size === 0) { alert('You haven\'t voted for any games yet!'); return; }
         const data = JSON.stringify(Array.from(votedGames));
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         a.href = url;
         a.download = 'my_game_votes.json';
         document.body.appendChild(a);
-        a.click();
+a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
@@ -333,16 +333,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.toggle('light-theme');
     });
 
-    // Modal Logic...
     const openModal = (gameId) => fetchGameDetails(gameId);
     closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
     window.addEventListener('click', (e) => { if (e.target == modal) modal.style.display = 'none'; });
 
-    // Utility Functions...
     const showLoader = () => loader.style.display = 'block';
     const hideLoader = () => loader.style.display = 'none';
 
-    // --- Initial Load ---
     fetchGenres();
     fetchGames(currentPage);
 });
