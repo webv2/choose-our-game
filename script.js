@@ -170,7 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const dynamic = dynamicFilter.value;
         const ordering = orderingFilter.value;
         
-        // --- THIS IS THE CHANGE: NSFW games are now filtered out automatically ---
         let url = `${BASE_URL}/games?key=${API_KEY}&page=${page}&page_size=24&exclude_tags=499`;
 
         if (search) url += `&search=${search}&search_exact=true`;
@@ -264,7 +263,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch(`${BASE_URL}/games/${gameId}?key=${API_KEY}`).then(res => res.json()),
                 fetch(`${BASE_URL}/games/${gameId}/screenshots?key=${API_KEY}`).then(res => res.json())
             ]);
-            modalBody.innerHTML = `<div class="modal-header"><img src="${imgSrc}" class="modal-cover-art" alt="${details.name} Cover Art"><div class="modal-header-text"><h2>${details.name}</h2><p>${details.description_raw ? details.description_raw.substring(0, 280) : 'No description available.'}...</p><strong>Genres:</strong> ${details.genres.map(g => g.name).join(', ')}<br><strong>Release Date:</strong> ${details.released}</div></div><h3>Screenshots</h3><div id="modal-screenshots">${screenshots.results.slice(0, 6).map(ss => `<img src="${ss.image}" alt="Screenshot">`).join('')}</div>`;
+            
+            // --- THIS IS THE CHANGE: Added a link to the game's page ---
+            const gameUrl = `https://rawg.io/games/${details.slug}`;
+            modalBody.innerHTML = `
+                <div class="modal-header">
+                    <img src="${imgSrc}" class="modal-cover-art" alt="${details.name} Cover Art">
+                    <div class="modal-header-text">
+                        <h2>${details.name}</h2>
+                        <p>${details.description_raw ? details.description_raw.substring(0, 280) : 'No description available.'}...</p>
+                        <strong>Genres:</strong> ${details.genres.map(g => g.name).join(', ')}<br>
+                        <strong>Release Date:</strong> ${details.released}<br>
+                        <strong><a href="${gameUrl}" target="_blank" rel="noopener noreferrer">View on RAWG.io</a></strong>
+                    </div>
+                </div>
+                <h3>Screenshots</h3>
+                <div id="modal-screenshots">${screenshots.results.slice(0, 6).map(ss => `<img src="${ss.image}" alt="Screenshot">`).join('')}</div>
+            `;
         } catch (error) {
             modalBody.innerHTML = '<p>Could not load details.</p>';
         } finally {
@@ -367,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIALIZATION and EVENT LISTENERS ---
     populateDateRanges();
-    fetchGenres(); // This will also call loadState and applyFilters on completion
+    fetchGenres(); 
 
     dateFilterBtn.addEventListener('click', (e) => {
         e.stopPropagation();
