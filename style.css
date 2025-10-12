@@ -1,43 +1,28 @@
 :root {
-    --bg-color-light: #f4f4f9;
-    --text-color-light: #333;
-    --card-bg-light: #ffffff;
-    --primary-color: #007bff;
-    --primary-hover: #0056b3;
-    --border-color-light: #ddd;
-
-    --bg-color-dark: #121212;
-    --text-color-dark: #e0e0e0;
-    --card-bg-dark: #1e1e1e;
-    --border-color-dark: #444;
+    --bg-color-light: #f4f49; --text-color-light: #333; --card-bg-light: #ffffff; --primary-color: #007bff; --primary-hover: #0056b3; --border-color-light: #ddd;
+    --bg-color-dark: #121212; --text-color-dark: #e0e0e0; --card-bg-dark: #1e1e1e; --border-color-dark: #444;
 }
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    margin: 0;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-/* Light Theme */
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 0; transition: background-color 0.3s, color 0.3s; }
 .light-theme { background-color: var(--bg-color-light); color: var(--text-color-light); }
-.light-theme .header-container, .light-theme .filters-panel, .light-theme .game-tile, .light-theme .modal-content { background-color: var(--card-bg-light); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.light-theme .header-container, .light-theme .filters-panel, .light-theme .game-tile, .light-theme .modal-content, .light-theme .custom-dropdown-panel { background-color: var(--card-bg-light); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 .light-theme .header-action-btn, .light-theme .vote-btn { background-color: var(--primary-color); }
 .light-theme .vote-btn.voted { background-color: #28a745; }
-.light-theme select, .light-theme input { border: 1px solid var(--border-color-light); }
+.light-theme select, .light-theme input, .light-theme .custom-dropdown-btn { border: 1px solid var(--border-color-light); }
 .light-theme .theme-toggle { background-color: #000000; }
-.light-theme .toggle-btn { background-color: #e0e0e0; color: #333; }
+.light-theme .toggle-btn, .light-theme .custom-dropdown-btn { background-color: #fff; color: #333; }
 .light-theme .toggle-btn[data-toggled="true"] { background-color: var(--primary-color); color: white; }
-
-/* Dark Theme */
+.light-theme .date-ranges ul li.active { background-color: #e9e9e9; }
+.light-theme .date-years ul li.selected { background-color: var(--primary-color); color: white; }
 .dark-theme { background-color: var(--bg-color-dark); color: var(--text-color-dark); }
-.dark-theme .header-container, .dark-theme .filters-panel, .dark-theme .game-tile, .dark-theme .modal-content { background-color: var(--card-bg-dark); border: 1px solid #333; }
+.dark-theme .header-container, .dark-theme .filters-panel, .dark-theme .game-tile, .dark-theme .modal-content, .dark-theme .custom-dropdown-panel { background-color: var(--card-bg-dark); border: 1px solid #333; }
 .dark-theme .header-action-btn, .dark-theme .vote-btn { background-color: var(--primary-color); }
 .dark-theme .vote-btn.voted { background-color: #218838; }
-.dark-theme select, .dark-theme input:not([type="checkbox"]) { border: 1px solid var(--border-color-dark); background-color: #2a2a2a; color: var(--text-color-dark); }
+.dark-theme select, .dark-theme input:not([type="checkbox"]), .dark-theme .custom-dropdown-btn { border: 1px solid var(--border-color-dark); background-color: #2a2a2a; color: var(--text-color-dark); }
 .dark-theme .theme-toggle { background-color: var(--card-bg-dark); border: 1px solid #333; }
-.dark-theme .toggle-btn { background-color: #333; color: #e0e0e0; border: 1px solid #555;}
+.dark-theme .toggle-btn, .dark-theme .custom-dropdown-btn { background-color: #2a2a2a; color: #e0e0e0; border: 1px solid #555; }
 .dark-theme .toggle-btn[data-toggled="true"] { background-color: var(--primary-color); border-color: var(--primary-color); }
-
+.dark-theme .date-ranges ul li.active { background-color: #333; }
+.dark-theme .date-years ul li.selected { background-color: var(--primary-color); color: white; }
 header { padding: 1rem; position: sticky; top: 0; z-index: 1000; }
 .header-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-radius: 8px; }
 h1 { margin: 0; font-size: 1.5rem; }
@@ -46,33 +31,34 @@ h1 { margin: 0; font-size: 1.5rem; }
 .header-action-btn:hover { opacity: 0.9; }
 .theme-toggle { width: 40px; height: 40px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 1.2rem; line-height: 40px; text-align: center; transition: background-color 0.3s, transform 0.3s; flex-shrink: 0; }
 .theme-toggle:hover { transform: scale(1.1); }
-
 main { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
 .controls-container { margin-bottom: 1rem; }
 .filters-panel { padding: 1rem; border-radius: 8px; margin-top: 10px; display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; }
 .filters-panel.hidden { display: none; }
 .filter-group { display: flex; flex-direction: column; }
 .filter-group label { margin-bottom: 5px; font-weight: bold; }
-.filter-group select, .filter-group input, .filter-group .toggle-btn { padding: 8px; border-radius: 5px; font-size: 1rem; }
+.filter-group select, .filter-group input, .filter-group .toggle-btn, .filter-group .custom-dropdown-btn { padding: 8px; border-radius: 5px; font-size: 1rem; }
 .toggle-btn { border: none; cursor: pointer; padding: 9px 15px; transition: background-color 0.2s, color 0.2s; }
-
+.custom-dropdown-container { position: relative; }
+.custom-dropdown-btn { text-align: left; width: 150px; }
+.custom-dropdown-panel { position: absolute; top: calc(100% + 5px); left: 0; z-index: 1010; border-radius: 5px; display: flex; opacity: 0; transform: translateY(-10px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+.custom-dropdown-panel:not(.hidden) { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.date-ranges, .date-years { padding: 5px; }
+.date-ranges ul, .date-years ul { list-style: none; margin: 0; padding: 0; }
+.date-ranges { border-right: 1px solid var(--border-color-dark); }
+.dark-theme .date-ranges { border-right-color: var(--border-color-dark); }
+.light-theme .date-ranges { border-right-color: var(--border-color-light); }
+.date-ranges ul li, .date-years ul li { padding: 8px 12px; cursor: pointer; border-radius: 4px; }
+.date-ranges ul li:hover, .date-years ul li:hover { background-color: rgba(0, 123, 255, 0.1); }
+.date-years ul { max-height: 240px; overflow-y: auto; }
+.date-actions { padding-top: 5px; margin-top: 5px; border-top: 1px solid var(--border-color-dark); }
+.dark-theme .date-actions { border-top-color: var(--border-color-dark); }
+.light-theme .date-actions { border-top-color: var(--border-color-light); }
+.date-actions button { background: none; border: none; color: var(--primary-color); cursor: pointer; width: 100%; text-align: left; padding: 8px 12px; }
 .games-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
 .games-container.filter-library .game-tile:not(.owned-game) { display: none; }
-
-.game-tile {
-    border-radius: 8px; overflow: hidden; position: relative; cursor: pointer;
-    /* Add 'filter' to the transition for the new highlight effect */
-    transition: transform 0.2s, filter 0.2s;
-    opacity: 1;
-}
-/* --- THIS IS THE KEY CHANGE --- */
-.game-tile.hiding {
-    /* Instead of hiding, we make it stand out */
-    filter: brightness(1.4);
-    transform: scale(1.05);
-    z-index: 10; /* Ensure it's above its neighbors */
-}
-
+.game-tile { border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; transition: transform 0.2s, filter 0.2s; opacity: 1; }
+.game-tile.hiding { filter: brightness(1.4); transform: scale(1.05); z-index: 10; }
 .game-tile:hover { transform: translateY(-5px); }
 .game-tile img { width: 100%; height: 280px; object-fit: cover; display: block; }
 .game-info { padding: 1rem; }
@@ -81,22 +67,18 @@ main { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
 .vote-count { position: absolute; top: 10px; right: 10px; background-color: rgba(255, 0, 0, 0.8); color: white; padding: 5px 8px; border-radius: 50%; font-weight: bold; font-size: 0.9rem; }
 .loader { border: 8px solid #f3f3f3; border-top: 8px solid var(--primary-color); border-radius: 50%; width: 60px; height: 60px; animation: spin 2s linear infinite; margin: 40px auto; display: none; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* --- Animated Modal Styles --- */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); opacity: 0; z-index: 2000; pointer-events: none; transition: opacity 0.35s ease-in-out; }
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
 .modal-container { position: fixed; z-index: 2001; transform-origin: top left; will-change: transform, width, height, opacity; transition: transform 0.35s ease-in-out, width 0.35s ease-in-out, height 0.35s ease-in-out, opacity 0.35s; }
 .modal-content { width: 100%; height: 100%; border-radius: 8px; overflow-y: auto; overflow-x: hidden; position: relative; padding: 20px; box-sizing: border-box; }
 #modal-body { opacity: 0; transition: opacity 0.2s ease-in-out; }
 .modal-container.active #modal-body { opacity: 1; transition-delay: 0.15s; }
-
 .modal-header { display: flex; gap: 20px; margin-bottom: 15px; }
 .modal-cover-art { width: 150px; height: 200px; object-fit: cover; border-radius: 5px; flex-shrink: 0; }
 .modal-header-text h2 { margin-top: 0; }
 #modal-screenshots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; }
 #modal-screenshots img { width: 100%; border-radius: 5px; }
 .close-button { color: #aaa; position: absolute; top: 15px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; z-index: 2002; }
-
 @media (max-width: 768px) {
     .header-container { flex-direction: column; gap: 15px; }
     h1 { font-size: 1.2rem; }

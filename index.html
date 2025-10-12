@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Choose Our Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -27,6 +27,28 @@
                 <div class="filter-group">
                     <label for="search-bar">Search Game:</label>
                     <input type="text" id="search-bar" placeholder="E.g., Baldur's Gate 3">
+                </div>
+                <!-- New Date Filter Structure -->
+                <div class="filter-group">
+                    <label>Release Date:</label>
+                    <div id="date-filter-container" class="custom-dropdown-container">
+                        <button id="date-filter-btn" class="custom-dropdown-btn">Any Date</button>
+                        <div id="date-filter-panel" class="custom-dropdown-panel hidden">
+                            <div class="date-ranges">
+                                <ul id="date-ranges-list">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
+                            <div class="date-years">
+                                <ul id="date-years-list">
+                                    <!-- Populated by JS -->
+                                </ul>
+                                <div class="date-actions">
+                                    <button id="date-select-all-btn">Select All</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="filter-group">
                     <label for="dynamic-filter">Trends & Releases:</label>
