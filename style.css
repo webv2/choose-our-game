@@ -123,3 +123,33 @@ main { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
     .modal-header { flex-direction: column; }
     .modal-cover-art { width: 100%; height: auto; }
 }
+#report-modal-container {
+    /* Start hidden, just like the other modal */
+    position: fixed;
+    z-index: 2001;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease-in-out;
+    
+    /* Make the report modal larger */
+    width: 90vw;
+    height: 85vh;
+    max-width: 1200px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95); /* Start slightly smaller */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#report-modal-overlay.active #report-modal-container {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1); /* Animate to full size */
+}
+
+/* Ensure iframe body takes up full space */
+#report-modal-body {
+    width: 100%;
+    height: calc(100% - 40px); /* Adjust for padding and close button */
+    position: relative;
+}
