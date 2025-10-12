@@ -1,9 +1,8 @@
 /*
  * FINAL SCRIPT - Version with Supabase Voting & Report Modal
- * Instructions:
- * 1. Delete ALL content from your existing script.js file.
- * 2. Paste this entire code block into the empty file.
- * 3. Fill in your Supabase URL and Key below.
+ * Fixes:
+ * 1. Search functionality is now more flexible (removed search_exact=true).
+ * 2. Corrected NSFW filter tag ID to 499.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
@@ -147,14 +146,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasNextPage = false;
 
             } else {
-                let url = `${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&page=${page}&page_size=24&exclude_tags=498`;
+                // --- FIX #2: CORRECTED NSFW TAG ID ---
+                let url = `${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&page=${page}&page_size=24&exclude_tags=499`;
                 const search = searchBar.value.trim();
                 const genre = genreFilter.value;
                 const tags = tagsFilter.value;
                 const dynamic = dynamicFilter.value;
                 const dates = getDatesForFilter(dynamic);
 
-                if (search) url += `&search=${search}&search_exact=true`;
+                // --- FIX #1: REMOVED `search_exact=true` FOR BETTER SEARCHING ---
+                if (search) url += `&search=${search}`;
                 if (genre) url += `&genres=${genre}`;
                 if (tags) url += `&tags=${tags}`;
                 if (ordering) url += `&ordering=${ordering}`;
@@ -527,6 +528,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Load ---
     populateDateRanges();
-    fetchGenres(); // This handles the first call to loadState and applyFilters *uto el que lea
+    fetchGenres();
 });
-
