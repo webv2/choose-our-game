@@ -1,6 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     const API_KEY = '194e7b3728b04675acb4abd1ffb834f0';
     const BASE_URL = 'https://api.rawg.io/api';
+	
+	   // --- PASTE YOUR SUPABASE CREDENTIALS HERE ---
+    const SUPABASE_URL = 'https://lgtajqxzcgutovcqwepe.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGFqcXh6Y2d1dG92Y3F3ZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDg3NjIsImV4cCI6MjA3NTc4NDc2Mn0.QKnnpZ4fHrgpSeCeyJ2qVOJUqafd3jxRF4j5uMenMbg';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     // --- ELEMENT SELECTORS ---
     const gamesContainer = document.getElementById('games-container');
@@ -34,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- STATE VARIABLES ---
+	let voteCounts = new Map(); // Stores gameId -> voteCount
+    let localVotes = new Set(); // Tracks what this user has voted for
     let originalTile = null,
         votedGames = new Set(),
         importedVotes = {},
@@ -41,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isLoading = false,
         hasNextPage = true,
         selectedYears = new Set();
+		
         
     // --- UTILITY FUNCTIONS ---
     const showLoader = () => loader.style.display = 'block';
@@ -142,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterBtn.textContent = `${selectedYears.size} years selected`;
         }
     };
-
+// --- CORE LOGIC ---
     const applyFilters = () => {
         currentPage = 1;
         hasNextPage = true;
@@ -150,94 +158,150 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     };
 
-    const checkAndLoadMore = () => {
-        if (isLoading || !hasNextPage) return;
-        const isLibraryFilterActive = libraryToggleBtn.dataset.toggled === 'true';
-        const isContentScrollable = document.documentElement.scrollHeight > document.documentElement.clientHeight;
-        if (isLibraryFilterActive && !isContentScrollable) {
-            currentPage++;
-            fetchGames(currentPage, true);
-        }
-    };
-
     const fetchGames = async (page = 1, append = false) => {
         if (isLoading || (!hasNextPage && append)) return;
         isLoading = true;
         showLoader();
-        const search = searchBar.value.trim();
-        const genre = genreFilter.value;
-        const tags = tagsFilter.value;
-        const dynamic = dynamicFilter.value;
+        if (!append) gamesContainer.innerHTML = '';
+        
         const ordering = orderingFilter.value;
         
-        let url = `${BASE_URL}/games?key=${API_KEY}&page=${page}&page_size=24&exclude_tags=499`;
-
-        if (search) url += `&search=${search}&search_exact=true`;
-        if (genre) url += `&genres=${genre}`;
-        if (tags) url += `&tags=${tags}`;
-        if (ordering) url += `&ordering=${ordering}`;
-
-        const dates = getDatesForFilter(dynamic);
-        if (dates) {
-            url += `&dates=${dates}`;
-        } else if (selectedYears.size > 0) {
-            const yearRanges = Array.from(selectedYears).map(year => `${year}-01-01,${year}-12-31`).join(',');
-            url += `&dates=${yearRanges}`;
-        }
-
-        if (!append) gamesContainer.innerHTML = '';
         try {
-            const response = await fetch(url);
-            const data = await response.json();
-            displayGames(data.results, append);
-            hasNextPage = data.next !== null;
+            if (ordering === 'votes') {
+                // 1. Get sorted list of game IDs from our Supabase DB
+                const { data: voteData, error } = await supabase
+                    .from('Games')
+                    .select('game_id, votes')
+                    .order('votes', { ascending: false });
+
+                if (error) throw error;
+                if (voteData.length === 0) {
+                    displayGames([], false);
+                    return;
+                }
+
+                // Update our local vote counts map
+                voteData.forEach(item => voteCounts.set(item.game_id, item.votes));
+                
+                const gameIds = voteData.map(g => g.game_id).join(',');
+
+                // 2. Fetch game details for those IDs from RAWG
+                const response = await fetch(`${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&ids=${gameIds}`);
+                const rawgData = await response.json();
+
+                // 3. Manually sort the RAWG results to match our vote order
+                const sortedResults = rawgData.results.sort((a, b) => voteCounts.get(b.id) - voteCounts.get(a.id));
+                displayGames(sortedResults, append);
+                hasNextPage = false;
+
+            } else {
+                // Standard fetch from RAWG
+                let url = `${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&page=${page}&page_size=24&exclude_tags=499`;
+                const search = searchBar.value.trim();
+                const genre = genreFilter.value;
+                const tags = tagsFilter.value;
+                if (search) url += `&search=${search}&search_exact=true`;
+                if (genre) url += `&genres=${genre}`;
+                if (tags) url += `&tags=${tags}`;
+                if (ordering) url += `&ordering=${ordering}`;
+                // ... add other filters as needed
+
+                const response = await fetch(url);
+                const data = await response.json();
+                displayGames(data.results, append);
+                hasNextPage = data.next !== null;
+            }
         } catch (error) {
             console.error('Error fetching games:', error);
             gamesContainer.innerHTML = '<p>Failed to load games. Please try again later.</p>';
         } finally {
             hideLoader();
             isLoading = false;
-            checkAndLoadMore();
-        }
-    };
-
-    const fetchGenres = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}/genres?key=${API_KEY}`);
-            const data = await response.json();
-            data.results.forEach(genre => {
-                const option = document.createElement('option');
-                option.value = genre.slug;
-                option.textContent = genre.name;
-                genreFilter.appendChild(option);
-            });
-            loadState();
-            updateDateFilterButtonText();
-            applyFilters();
-        } catch (error) {
-            console.error('Error fetching genres:', error);
         }
     };
 
     const displayGames = (games, append) => {
+        if (!append) gamesContainer.innerHTML = '';
         if (games.length === 0 && !append) {
             gamesContainer.innerHTML = '<p>No games found matching your criteria.</p>';
             return;
         }
+        
         const fragment = document.createDocumentFragment();
         games.forEach(game => {
             const gameTile = document.createElement('div');
-            const isOwned = mySteamLibrary.has(game.name.toLowerCase().trim());
-            gameTile.className = `game-tile ${isOwned ? 'owned-game' : ''}`;
+            gameTile.className = `game-tile ${mySteamLibrary.has(game.name.toLowerCase().trim()) ? 'owned-game' : ''}`;
             gameTile.dataset.gameId = game.id;
-            gameTile.innerHTML = `<img src="${game.background_image || ''}" alt="${game.name}" loading="lazy"><div class="game-info"><h3>${game.name}</h3><button class="vote-btn">Vote</button></div>`;
+            gameTile.dataset.gameName = game.name;
+            
+            const voteCount = voteCounts.get(game.id) || 0;
+            const voteCountHTML = voteCount > 0 ? `<div class="vote-count" title="${voteCount} vote(s)">${voteCount}</div>` : '';
+
+            gameTile.innerHTML = `
+                <img src="${game.background_image || ''}" alt="${game.name}" loading="lazy">
+                ${voteCountHTML}
+                <div class="game-info">
+                    <h3>${game.name}</h3>
+                    <button class="vote-btn">Vote</button>
+                </div>`;
+            
+            gameTile.querySelector('.vote-btn').addEventListener('click', handleVoteClick);
             gameTile.addEventListener('click', (e) => {
-                if (e.target.tagName !== 'BUTTON') openModal(gameTile);
+                if (!e.target.classList.contains('vote-btn')) openModal(gameTile);
             });
             fragment.appendChild(gameTile);
         });
         gamesContainer.appendChild(fragment);
-        updateUIWithVotes();
+        updateVoteButtons();
+    };
+    
+    const handleVoteClick = async (e) => {
+        e.stopPropagation();
+        const button = e.target;
+        const gameTile = button.closest('.game-tile');
+        const gameId = gameTile.dataset.gameId;
+        const gameName = gameTile.dataset.gameName;
+
+        button.textContent = "Saving...";
+        button.disabled = true;
+
+        // Call our special database function
+        const { error } = await supabase.rpc('increment_vote', {
+            game_id_in: Number(gameId),
+            game_name_in: gameName
+        });
+        
+        if (error) {
+            console.error('Error saving vote:', error);
+            button.textContent = "Error!";
+        } else {
+            localVotes.add(gameId);
+            const currentVotes = voteCounts.get(Number(gameId)) || 0;
+            voteCounts.set(Number(gameId), currentVotes + 1);
+            
+            // Refresh the vote count on the tile
+            let voteCountDiv = gameTile.querySelector('.vote-count');
+            if(!voteCountDiv) {
+                voteCountDiv = document.createElement('div');
+                voteCountDiv.className = 'vote-count';
+                gameTile.prepend(voteCountDiv);
+            }
+            voteCountDiv.textContent = currentVotes + 1;
+            
+            updateVoteButtons();
+        }
+    };
+
+    const updateVoteButtons = () => {
+        document.querySelectorAll('.game-tile').forEach(tile => {
+            const gameId = tile.dataset.gameId;
+            const voteBtn = tile.querySelector('.vote-btn');
+            if (localVotes.has(gameId)) {
+                voteBtn.classList.add('voted');
+                voteBtn.textContent = 'Voted!';
+                voteBtn.disabled = true;
+            }
+        });
     };
 
     const openModal = (tile) => {
