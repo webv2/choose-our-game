@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasNextPage = false;
 
             } else {
-                let url = `${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&page=${page}&page_size=24&exclude_tags=499`;
+                let url = `${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&page=${page}&page_size=24&exclude_tags=498`;
                 const search = searchBar.value.trim();
                 const genre = genreFilter.value;
                 const tags = tagsFilter.value;
