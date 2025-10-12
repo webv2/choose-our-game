@@ -301,7 +301,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const getDatesForFilter = (filterValue) => { /* ... (same as before) ... */ };
+    const getDatesForFilter = (filterValue) => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth(); // 0-11
+        const day = now.getDate();
+
+        const formatDate = (date) => date.toISOString().split('T')[0];
+
+        switch (filterValue) {
+            case 'this-month':
+                return `${formatDate(new Date(year, month, 1))},${formatDate(new Date(year, month + 1, 0))}`;
+            case 'next-month':
+                return `${formatDate(new Date(year, month + 1, 1))},${formatDate(new Date(year, month + 2, 0))}`;
+            case 'popular-week':
+                return `${formatDate(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000))},${formatDate(now)}`;
+            case 'popular-month':
+                return `${formatDate(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000))},${formatDate(now)}`;
+            case 'popular-2024':
+                return `${year}-01-01,${year}-12-31`;
+            default:
+                return null;
+        }
+    };
+
     const populateDateRanges = () => { /* ... (same as before) ... */ };
     const populateYears = (start, end) => { /* ... (same as before) ... */ };
     const updateDateFilterButtonText = () => { /* ... (same as before) ... */ };
@@ -432,6 +455,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Initial Load ---
-    populateDateRanges(); // --- *uto el que lo lea
+    populateDateRanges(); // *uto el que lo lea
     fetchGenres();
 });
