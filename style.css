@@ -1,0 +1,270 @@
+:root {
+    --bg-color-light: #f4f4f9;
+    --text-color-light: #333;
+    --card-bg-light: #ffffff;
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+
+    --bg-color-dark: #121212;
+    --text-color-dark: #e0e0e0;
+    --card-bg-dark: #1e1e1e;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Light Theme */
+.light-theme {
+    background-color: var(--bg-color-light);
+    color: var(--text-color-light);
+}
+.light-theme .header-container, .light-theme .filters-panel, .light-theme .game-tile, .light-theme .modal-content {
+    background-color: var(--card-bg-light);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.light-theme .header-action-btn, .light-theme #toggle-filters-btn, .light-theme .vote-btn {
+    background-color: var(--primary-color);
+}
+.light-theme .vote-btn.voted {
+     background-color: #28a745;
+}
+
+/* Dark Theme */
+.dark-theme {
+    background-color: var(--bg-color-dark);
+    color: var(--text-color-dark);
+}
+.dark-theme .header-container, .dark-theme .filters-panel, .dark-theme .game-tile, .dark-theme .modal-content {
+    background-color: var(--card-bg-dark);
+    border: 1px solid #333;
+}
+.dark-theme .header-action-btn, .dark-theme #toggle-filters-btn, .dark-theme .vote-btn {
+    background-color: var(--primary-color);
+}
+.dark-theme .vote-btn.voted {
+     background-color: #218838;
+}
+
+header {
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.header-buttons button {
+    margin-left: 10px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.header-buttons button:hover {
+    opacity: 0.9;
+}
+
+main {
+    max-width: 1200px;
+    margin: 1rem auto;
+    padding: 0 1rem;
+}
+
+.controls-container {
+    margin-bottom: 1rem;
+}
+
+.filters-panel {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 10px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.filters-panel.hidden {
+    display: none;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.filter-group select, .filter-group input {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.games-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.game-tile {
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.game-tile:hover {
+    transform: translateY(-5px);
+}
+
+.game-tile img {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    display: block;
+}
+
+.game-info {
+    padding: 1rem;
+}
+
+.game-info h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vote-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.vote-count {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 0, 0, 0.8);
+    color: white;
+    padding: 5px 8px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.pagination {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.pagination button {
+     padding: 10px 20px;
+     margin: 0 10px;
+     cursor: pointer;
+}
+
+.pagination button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.loader {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid var(--primary-color);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 2s linear infinite;
+    margin: 40px auto;
+    display: none; /* Hidden by default */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Modal Styles */
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+}
+
+.modal-content {
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 800px;
+    position: relative;
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#modal-body h2 {
+    margin-top: 0;
+}
+
+#modal-screenshots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+#modal-screenshots img {
+    width: 100%;
+    border-radius: 5px;
+}
+
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    h1 {
+        font-size: 1.2rem;
+    }
+}
