@@ -35,23 +35,112 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateDateFilterButtonText = () => { if (selectedYears.size === 0) { dateFilterBtn.textContent = 'Any Date'; } else if (selectedYears.size === 1) { dateFilterBtn.textContent = `${selectedYears.values().next().value}`; } else { dateFilterBtn.textContent = `${selectedYears.size} years selected`; } };
     const applyFilters = () => { currentPage = 1; hasNextPage = true; fetchGames(currentPage, false); saveState(); };
 
-    // --- Data Fetching & Display ---
+});
+
+// --- Data Fetching & Display ---
     const checkAndLoadMore = () => { if (isLoading || !hasNextPage) return; const isLibraryFilterActive = libraryToggleBtn.dataset.toggled === 'true'; const isContentScrollable = document.documentElement.scrollHeight > document.documentElement.clientHeight; if (isLibraryFilterActive && !isContentScrollable) { currentPage++; fetchGames(currentPage, true); } };
     const fetchGames = async (page = 1, append = false) => { if (isLoading || (!hasNextPage && append)) return; isLoading = true; showLoader(); const search = searchBar.value.trim(); const genre = genreFilter.value; const tags = tagsFilter.value; const dynamic = dynamicFilter.value; const ordering = orderingFilter.value; let url = `${BASE_URL}/games?key=${API_KEY}&page=${page}&page_size=24`; if (search) url += `&search=${search}&search_exact=true`; if (genre) url += `&genres=${genre}`; if (tags) url += `&tags=${tags}`; if (ordering) url += `&ordering=${ordering}`; const dates = getDatesForFilter(dynamic); if (dates) { url += `&dates=${dates}`; if (dynamic.startsWith('popular') && !ordering) url += `&ordering=-added`; } if (selectedYears.size > 0 && !dates) { const yearRanges = Array.from(selectedYears).map(year => `${year}-01-01,${year}-12-31`).join(','); url += `&dates=${yearRanges}`; } if (!append) gamesContainer.innerHTML = ''; try { const response = await fetch(url); const data = await response.json(); displayGames(data.results, append); hasNextPage = data.next !== null; } catch (error) { console.error('Error fetching games:', error); gamesContainer.innerHTML = '<p>Failed to load games. Please try again later.</p>'; } finally { hideLoader(); isLoading = false; checkAndLoadMore(); } };
     const fetchGenres = async () => { try { const response = await fetch(`${BASE_URL}/genres?key=${API_KEY}`); const data = await response.json(); data.results.forEach(genre => { const option = document.createElement('option'); option.value = genre.slug; option.textContent = genre.name; genreFilter.appendChild(option); }); loadState(); updateDateFilterButtonText(); applyFilters(); } catch (error) { console.error('Error fetching genres:', error); } };
     const displayGames = (games, append) => { if (games.length === 0 && !append) { gamesContainer.innerHTML = '<p>No games found matching your criteria.</p>'; return; } const fragment = document.createDocumentFragment(); games.forEach(game => { const gameTile = document.createElement('div'); const isOwned = mySteamLibrary.has(game.name.toLowerCase().trim()); gameTile.className = `game-tile ${isOwned ? 'owned-game' : ''}`; gameTile.dataset.gameId = game.id; gameTile.innerHTML = `<img src="${game.background_image || ''}" alt="${game.name}" loading="lazy"><div class="game-info"><h3>${game.name}</h3><button class="vote-btn">Vote</button></div>`; gameTile.addEventListener('click', (e) => { if (e.target.tagName !== 'BUTTON') { openModal(gameTile); } }); fragment.appendChild(gameTile); }); gamesContainer.appendChild(fragment); updateUIWithVotes(); };
-    
-    // --- Modal Animation ---
-    const openModal = (tile) => { if (!tile) return; originalTile = tile; const gameId = tile.dataset.gameId; const tileRect = tile.getBoundingClientRect(); const imgSrc = tile.querySelector('img').src; modalContainer.style.left = `${tileRect.left}px`; modalContainer.style.top = `${tileRect.top}px`; modalContainer.style.width = `${tileRect.width}px`; modalContainer.style.height = `${tileRect.height}px`; modalContainer.style.opacity = '0'; modalOverlay.classList.add('active'); tile.classList.add('hiding'); fetchGameDetailsAndAnimate(gameId, tileRect, imgSrc); };
-    const fetchGameDetailsAndAnimate = async (gameId, tileRect, imgSrc) => { modalBody.innerHTML = ''; try { const [details, screenshots] = await Promise.all([ fetch(`${BASE_URL}/games/${gameId}?key=${API_KEY}`).then(res => res.json()), fetch(`${BASE_URL}/games/${gameId}/screenshots?key=${API_KEY}`).then(res => res.json()) ]); modalBody.innerHTML = `<div class="modal-header"><img src="${imgSrc}" class="modal-cover-art" alt="${details.name} Cover Art"><div class="modal-header-text"><h2>${details.name}</h2><p>${details.description_raw ? details.description_raw.substring(0, 280) : 'No description available.'}...</p><strong>Genres:</strong> ${details.genres.map(g => g.name).join(', ')}<br><strong>Release Date:</strong> ${details.released}</div></div><h3>Screenshots</h3><div id="modal-screenshots">${screenshots.results.slice(0, 6).map(ss => `<img src="${ss.image}" alt="Screenshot">`).join('')}</div>`; } catch (error) { modalBody.innerHTML = '<p>Could not load details.</p>'; } finally { requestAnimationFrame(() => { modalContainer.style.opacity = '1'; modalContainer.classList.add('active'); const targetWidth = Math.min(800, window.innerWidth - 40); const targetHeight = Math.min(600, window.innerHeight - 40); const targetX = (window.innerWidth - targetWidth) / 2; const targetY = (window.innerHeight - targetHeight) / 2; modalContainer.style.transform = `translate(${targetX - tileRect.left}px, ${targetY - tileRect.top}px)`; modalContainer.style.width = `${targetWidth}px`; modalContainer.style.height = `${targetHeight}px`; }); } };
-    const closeModal = () => { if (!originalTile) return; const tileRect = originalTile.getBoundingClientRect(); modalContainer.classList.remove('active'); modalOverlay.classList.remove('active'); modalContainer.style.transform = ''; modalContainer.style.width = `${tileRect.width}px`; modalContainer.style.height = `${tileRect.height}px`; modalContainer.style.left = `${tileRect.left}px`; modalContainer.style.top = `${tileRect.top}px`; setTimeout(() => { if (originalTile) { originalTile.classList.remove('hiding'); } originalTile = null; }, 350); };
-    
+
     // --- Voting and Import/Export ---
     const updateUIWithVotes = () => { document.querySelectorAll('.game-tile').forEach(tile => { const gameId = tile.dataset.gameId; const voteBtn = tile.querySelector('.vote-btn'); const voteCountDiv = tile.querySelector('.vote-count'); voteBtn.classList.toggle('voted', votedGames.has(gameId)); voteBtn.textContent = votedGames.has(gameId) ? 'Voted!' : 'Vote'; const count = importedVotes[gameId] || 0; if (count > 0) { if (voteCountDiv) { voteCountDiv.textContent = count; } else { const newVoteCount = document.createElement('div'); newVoteCount.className = 'vote-count'; newVoteCount.title = `${count} imported vote(s)`; newVoteCount.textContent = count; tile.appendChild(newVoteCount); } } else if (voteCountDiv) { voteCountDiv.remove(); } }); };
     const shareAction = () => { if (votedGames.size === 0) { alert('You haven\'t voted for any games yet!'); return; } const data = JSON.stringify(Array.from(votedGames)); const blob = new Blob([data], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'my_game_votes.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); };
     const importAction = (e) => { const files = e.target.files; if (!files.length) return; importedVotes = {}; Array.from(files).forEach(file => { const reader = new FileReader(); reader.onload = (event) => { try { const importedIds = JSON.parse(event.target.result); if (Array.isArray(importedIds)) { importedIds.forEach(id => { const gameId = id.toString(); importedVotes[gameId] = (importedVotes[gameId] || 0) + 1; }); updateUIWithVotes(); } } catch (err) { console.error('Error reading file:', err); alert(`Could not read file: ${file.name}`); } }; reader.readAsText(file); }); e.target.value = ''; };
-    
-    // --------------------------------------------------------------------
+	
+	// --- Modal Animation ---
+    const openModal = (tile) => {
+        if (!tile) return;
+        originalTile = tile;
+        const gameId = tile.dataset.gameId;
+        const tileRect = tile.getBoundingClientRect();
+        const imgSrc = tile.querySelector('img').src;
+
+        // Position the modal container exactly over the clicked tile
+        modalContainer.style.left = `${tileRect.left}px`;
+        modalContainer.style.top = `${tileRect.top}px`;
+        modalContainer.style.width = `${tileRect.width}px`;
+        modalContainer.style.height = `${tileRect.height}px`;
+        modalContainer.style.opacity = '0'; // Start transparent
+
+        // Show the overlay and highlight the tile
+        modalOverlay.classList.add('active');
+        tile.classList.add('hiding');
+
+        // Fetch details and then trigger the animation
+        fetchGameDetailsAndAnimate(gameId, tileRect, imgSrc);
+    };
+
+    const fetchGameDetailsAndAnimate = async (gameId, tileRect, imgSrc) => {
+        modalBody.innerHTML = ''; // Clear previous content just in case
+        try {
+            // Fetch main details and screenshots simultaneously
+            const [details, screenshots] = await Promise.all([
+                fetch(`${BASE_URL}/games/${gameId}?key=${API_KEY}`).then(res => res.json()),
+                fetch(`${BASE_URL}/games/${gameId}/screenshots?key=${API_KEY}`).then(res => res.json())
+            ]);
+
+            // Build the inner HTML for the modal
+            modalBody.innerHTML = `
+                <div class="modal-header">
+                    <img src="${imgSrc}" class="modal-cover-art" alt="${details.name} Cover Art">
+                    <div class="modal-header-text">
+                        <h2>${details.name}</h2>
+                        <p>${details.description_raw ? details.description_raw.substring(0, 280) : 'No description available.'}...</p>
+                        <strong>Genres:</strong> ${details.genres.map(g => g.name).join(', ')}<br>
+                        <strong>Release Date:</strong> ${details.released}
+                    </div>
+                </div>
+                <h3>Screenshots</h3>
+                <div id="modal-screenshots">${screenshots.results.slice(0, 6).map(ss => `<img src="${ss.image}" alt="Screenshot">`).join('')}</div>`;
+        } catch (error) {
+            modalBody.innerHTML = '<p>Could not load details.</p>';
+            console.error("Error fetching game details for modal:", error);
+        } finally {
+            // This requests the browser to run our animation code on the next frame, ensuring a smooth start
+            requestAnimationFrame(() => {
+                modalContainer.style.opacity = '1';
+                modalContainer.classList.add('active');
+
+                // Calculate the target position and size for the modal
+                const targetWidth = Math.min(800, window.innerWidth - 40);
+                const targetHeight = Math.min(600, window.innerHeight - 40);
+                const targetX = (window.innerWidth - targetWidth) / 2;
+                const targetY = (window.innerHeight - targetHeight) / 2;
+
+                // Animate the modal to the center of the screen
+                modalContainer.style.transform = `translate(${targetX - tileRect.left}px, ${targetY - tileRect.top}px)`;
+                modalContainer.style.width = `${targetWidth}px`;
+                modalContainer.style.height = `${targetHeight}px`;
+            });
+        }
+    };
+
+    const closeModal = () => {
+        if (!originalTile) return;
+
+        const tileRect = originalTile.getBoundingClientRect();
+
+        // Remove the 'active' class to trigger the reverse CSS transition
+        modalContainer.classList.remove('active');
+        modalOverlay.classList.remove('active');
+
+        // Manually set the transform and size back to the tile's original position
+        modalContainer.style.transform = '';
+        modalContainer.style.width = `${tileRect.width}px`;
+        modalContainer.style.height = `${tileRect.height}px`;
+        modalContainer.style.left = `${tileRect.left}px`;
+        modalContainer.style.top = `${tileRect.top}px`;
+
+        // After the animation finishes, un-highlight the tile
+        setTimeout(() => {
+            if (originalTile) {
+                originalTile.classList.remove('hiding');
+            }
+            originalTile = null;
+        }, 350); // This duration must match the CSS transition duration
+    };
+	// --------------------------------------------------------------------
     // 4. INITIALIZATION & EVENT LISTENERS
     // --------------------------------------------------------------------
     
@@ -74,10 +163,29 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleFiltersBtn.addEventListener('click', () => { filtersPanel.classList.toggle('hidden'); toggleFiltersBtn.textContent = filtersPanel.classList.contains('hidden') ? 'Show Filters' : 'Hide Filters'; saveState(); });
     
     // Window & Global Events
-    window.addEventListener('scroll', () => { if (window.scrollY > 400) { backToTopBtn.classList.add('visible'); } else { backToTopBtn.classList.remove('visible'); } if (!isLoading && hasNextPage && (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500)) { currentPage++; fetchGames(currentPage, true); } });
+    window.addEventListener('scroll', () => {
+        // Back to Top button visibility
+        if (window.scrollY > 400) {
+            backToTopBtn.classList.add('visible');
+        } else {
+            backToTopBtn.classList.remove('visible');
+        }
+        
+        // Infinite scroll trigger
+        if (!isLoading && hasNextPage && (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500)) {
+            currentPage++;
+            fetchGames(currentPage, true);
+        }
+    });
     backToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    
     themeToggleBtn.addEventListener('click', () => { document.body.classList.toggle('dark-theme'); document.body.classList.toggle('light-theme'); saveState(); });
-    closeModalBtn.addEventListener('click', closeModal); modalOverlay.addEventListener('click', closeModal);
+    
+    // Modal & Action Events
+    closeModalBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', closeModal);
     gamesContainer.addEventListener('click', (e) => { if (e.target.classList.contains('vote-btn')) { e.stopPropagation(); const gameId = e.target.closest('.game-tile').dataset.gameId; votedGames.has(gameId) ? votedGames.delete(gameId) : votedGames.add(gameId); updateUIWithVotes(); } });
-    shareBtn.addEventListener('click', shareAction); importBtn.addEventListener('click', () => importInput.click()); importInput.addEventListener('change', importAction);
+    shareBtn.addEventListener('click', shareAction);
+    importBtn.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', importAction);
 });
