@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             if (ordering === 'votes') {
                 const { data: voteData, error } = await supabaseClient
-                    .from('Games')
+                    .from('games')
                     .select('game_id, votes')
                     .order('votes', { ascending: false });
 
@@ -496,3 +496,4 @@ document.addEventListener('DOMContentLoaded', () => {
     populateDateRanges();
     fetchGenres(); // This will handle the first call to loadState and applyFilters
 });
+
