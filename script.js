@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dynamicFilter.value = state.filters.dynamic || '';
         genreFilter.value = state.filters.genre || '';
         tagsFilter.value = state.filters.tags || '';
-        orderingFilter.value = state.filters.ordering || '-added'; // Load ordering
+        orderingFilter.value = state.filters.ordering || ''; // Load ordering, default to "Relevance"
         if (state.filters.years) {
             selectedYears = new Set(state.filters.years);
         }
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (search) url += `&search=${search}&search_exact=true`;
         if (genre) url += `&genres=${genre}`;
         if (tags) url += `&tags=${tags}`;
-        if (ordering) url += `&ordering=${ordering}`; // Add ordering to URL
+        if (ordering) url += `&ordering=${ordering}`; // Add ordering to URL if it's not empty
 
         const dates = getDatesForFilter(dynamic);
         if (dates) {
@@ -416,7 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (e) => {
         if (!dateFilterPanel.contains(e.target) && e.target !== dateFilterBtn) dateFilterPanel.classList.add('hidden');
     });
-
+    
+    // Updated to include the new orderingFilter
     [genreFilter, tagsFilter, dynamicFilter, orderingFilter].forEach(filter => filter.addEventListener('change', () => {
         if (filter === dynamicFilter && filter.value) {
             selectedYears.clear();
