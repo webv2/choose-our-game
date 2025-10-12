@@ -124,12 +124,10 @@ main { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
     .modal-cover-art { width: 100%; height: auto; }
 }
 #report-modal-container {
-    /* Start hidden, just like the other modal */
     position: fixed;
     z-index: 2001;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.35s ease-in-out;
+    /* opacity and pointer-events are handled by the overlay class */
+    /* transition: opacity 0.35s ease-in-out; */
     
     /* Make the report modal larger */
     width: 90vw;
@@ -141,7 +139,7 @@ main { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-#report-modal-overlay.active #report-modal-container {
+#report-modal-overlay.active > #report-modal-container {
     opacity: 1;
     pointer-events: auto;
     transform: translate(-50%, -50%) scale(1); /* Animate to full size */
