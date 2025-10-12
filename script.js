@@ -139,8 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadState = () => {
-        const state = JSON.parse(localStorage.getItem('chooseOurGameState'));
-        if (!state) return;
+        const stateString = localStorage.getItem('chooseOurGameState');
+        if (!stateString) return;
+        const state = JSON.parse(stateString);
 
         document.body.className = state.theme === 'dark' ? 'dark-theme' : 'light-theme';
         
@@ -237,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.textContent = genre.name;
                 genreFilter.appendChild(option);
             });
-            loadState();
             applyFilters();
         } catch (error) { console.error('Error fetching genres:', error); }
     };
@@ -339,9 +339,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const count = importedVotes[gameId] || 0;
             if (count > 0) {
-                if (voteCountDiv) voteCountDiv.textContent = count;
-                else tile.insertAdjacentHTML('beforeend', `<div class="vote-count" title="${count} imported vote(s)">${count}</div>`);
-            } else if (voteCountDiv) voteCountDiv.remove();
+                if (voteCountDiv) {
+                    voteCountDiv.textContent = count;
+                } else {
+                    const newVoteCount = document.createElement('div');
+                    newVoteCount.className = 'vote-count';
+                    newVoteCount.title = `${count} imported vote(s)`;
+                    newVoteCount.textContent = count;
+                    tile.appendChild(newVoteCount);
+                }
+            } else if (voteCountDiv) {
+                voteCountDiv.remove();
+            }
         });
     };
 
@@ -438,5 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showLoader = () => loader.style.display = 'block';
     const hideLoader = () => loader.style.display = 'none';
 
+    // --- INITIALIZATION ---
+    loadState();
     fetchGenres();
 });
