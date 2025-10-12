@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loader = document.getElementById('loader');
     const genreFilter = document.getElementById('genre-filter');
     const tagsFilter = document.getElementById('tags-filter');
+    const dynamicFilter = document.getElementById('dynamic-filter');
     const libraryToggleBtn = document.getElementById('library-toggle-btn');
     const searchBar = document.getElementById('search-bar');
     const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
@@ -109,9 +110,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const importBtn = document.getElementById('import-btn');
     const importInput = document.getElementById('import-input');
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    const modal = document.getElementById('details-modal');
+    
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalContainer = document.getElementById('modal-container');
     const modalBody = document.getElementById('modal-body');
-    const closeModalBtn = document.querySelector('.close-button');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    let originalTile = null;
 
     let votedGames = new Set();
     let importedVotes = {};
@@ -119,12 +123,68 @@ document.addEventListener('DOMContentLoaded', () => {
     let isLoading = false;
     let hasNextPage = true;
 
+    const saveState = () => {
+        const state = {
+            theme: document.body.classList.contains('dark-theme') ? 'dark' : 'light',
+            filters: {
+                search: searchBar.value,
+                dynamic: dynamicFilter.value,
+                genre: genreFilter.value,
+                tags: tagsFilter.value,
+                library: libraryToggleBtn.dataset.toggled === 'true',
+                filtersVisible: !filtersPanel.classList.contains('hidden')
+            }
+        };
+        localStorage.setItem('chooseOurGameState', JSON.stringify(state));
+    };
+
+    const loadState = () => {
+        const state = JSON.parse(localStorage.getItem('chooseOurGameState'));
+        if (!state) return;
+
+        document.body.className = state.theme === 'dark' ? 'dark-theme' : 'light-theme';
+        
+        searchBar.value = state.filters.search || '';
+        dynamicFilter.value = state.filters.dynamic || '';
+        genreFilter.value = state.filters.genre || '';
+        tagsFilter.value = state.filters.tags || '';
+        
+        if (state.filters.library) {
+            libraryToggleBtn.dataset.toggled = 'true';
+            gamesContainer.classList.add('filter-library');
+        }
+
+        if (state.filters.filtersVisible) {
+            filtersPanel.classList.remove('hidden');
+            toggleFiltersBtn.textContent = 'Hide Filters';
+        }
+    };
+
+    const getDatesForFilter = (filterValue) => {
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = today.getMonth();
+        const formatDate = (date) => date.toISOString().split('T')[0];
+
+        switch (filterValue) {
+            case 'this-month': return `${formatDate(new Date(y, m, 1))},${formatDate(new Date(y, m + 1, 0))}`;
+            case 'next-month': return `${formatDate(new Date(y, m + 1, 1))},${formatDate(new Date(y, m + 2, 0))}`;
+            case 'popular-week':
+                const firstDay = new Date(today);
+                firstDay.setDate(today.getDate() - today.getDay());
+                const lastDay = new Date(firstDay);
+                lastDay.setDate(firstDay.getDate() + 6);
+                return `${formatDate(firstDay)},${formatDate(lastDay)}`;
+            case 'popular-month': return `${formatDate(new Date(y, m, 1))},${formatDate(new Date(y, m + 1, 0))}`;
+            case 'popular-2024': return `2024-01-01,2024-12-31`;
+            default: return '';
+        }
+    };
+    
     const checkAndLoadMore = () => {
         if (isLoading || !hasNextPage) return;
-
         const isLibraryFilterActive = libraryToggleBtn.dataset.toggled === 'true';
         const isContentScrollable = document.documentElement.scrollHeight > document.documentElement.clientHeight;
-
         if (isLibraryFilterActive && !isContentScrollable) {
             currentPage++;
             fetchGames(currentPage, true);
@@ -136,15 +196,20 @@ document.addEventListener('DOMContentLoaded', () => {
         isLoading = true;
         showLoader();
 
+        const search = searchBar.value.trim();
         const genre = genreFilter.value;
         const tags = tagsFilter.value;
-        const search = searchBar.value.trim();
-        
+        const dynamic = dynamicFilter.value;
+
         let url = `${BASE_URL}/games?key=${API_KEY}&page=${page}&page_size=24`;
+        if (search) url += `&search=${search}&search_exact=true`;
         if (genre) url += `&genres=${genre}`;
         if (tags) url += `&tags=${tags}`;
-        if (search) url += `&search=${search}`;
         
+        const dates = getDatesForFilter(dynamic);
+        if (dates) url += `&dates=${dates}`;
+        if (dynamic.startsWith('popular')) url += `&ordering=-added`;
+
         if (!append) gamesContainer.innerHTML = '';
 
         try {
@@ -172,27 +237,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.textContent = genre.name;
                 genreFilter.appendChild(option);
             });
+            loadState();
+            applyFilters();
         } catch (error) { console.error('Error fetching genres:', error); }
     };
 
-    const fetchGameDetails = async (gameId) => {
-        showLoader();
-        try {
-            const detailsPromise = fetch(`${BASE_URL}/games/${gameId}?key=${API_KEY}`).then(res => res.json());
-            const screenshotsPromise = fetch(`${BASE_URL}/games/${gameId}/screenshots?key=${API_KEY}`).then(res => res.json());
-            
-            const [details, screenshots] = await Promise.all([detailsPromise, screenshotsPromise]);
-            displayGameDetails(details, screenshots.results);
-        } catch (error) {
-            console.error('Error fetching game details:', error);
-            modalBody.innerHTML = '<p>Could not load details.</p>';
-        } finally {
-            hideLoader();
-        }
-    };
-    
     const displayGames = (games, append) => {
-        if (!append) gamesContainer.innerHTML = '';
         if (games.length === 0 && !append) {
             gamesContainer.innerHTML = '<p>No games found matching your criteria.</p>';
             return;
@@ -204,29 +254,80 @@ document.addEventListener('DOMContentLoaded', () => {
             gameTile.className = `game-tile ${isOwned ? 'owned-game' : ''}`;
             gameTile.dataset.gameId = game.id;
 
-            const isVoted = votedGames.has(game.id.toString());
-            const voteCount = importedVotes[game.id] || 0;
-
-            gameTile.innerHTML = `
-                <img src="${game.background_image || ''}" alt="${game.name}" loading="lazy">
-                <div class="game-info">
-                    <h3>${game.name}</h3>
-                    <button class="vote-btn ${isVoted ? 'voted' : ''}" data-game-id="${game.id}">${isVoted ? 'Voted!' : 'Vote'}</button>
-                </div>
-                ${voteCount > 0 ? `<div class="vote-count" title="${voteCount} imported vote(s)">${count}</div>` : ''}
-            `;
+            gameTile.innerHTML = `<img src="${game.background_image || ''}" alt="${game.name}" loading="lazy"><div class="game-info"><h3>${game.name}</h3><button class="vote-btn">Vote</button></div>`;
             
-            gameTile.querySelector('img').addEventListener('click', () => openModal(game.id));
+            gameTile.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') {
+                    openModal(gameTile);
+                }
+            });
             fragment.appendChild(gameTile);
         });
         gamesContainer.appendChild(fragment);
+        updateUIWithVotes();
     };
 
-    const displayGameDetails = (details, screenshots) => {
-        modalBody.innerHTML = `<h2>${details.name}</h2><p>${details.description_raw.substring(0, 400)}...</p><strong>Genres:</strong> ${details.genres.map(g => g.name).join(', ')}<br><strong>Release Date:</strong> ${details.released}<h3>Screenshots</h3><div id="modal-screenshots">${screenshots.slice(0, 6).map(ss => `<img src="${ss.image}" alt="Screenshot">`).join('')}</div>`;
-        modal.style.display = 'block';
+    const openModal = (tile) => {
+        if (!tile) return;
+        originalTile = tile;
+        const gameId = tile.dataset.gameId;
+        const tileRect = tile.getBoundingClientRect();
+
+        modalContainer.style.left = `${tileRect.left}px`;
+        modalContainer.style.top = `${tileRect.top}px`;
+        modalContainer.style.width = `${tileRect.width}px`;
+        modalContainer.style.height = `${tileRect.height}px`;
+
+        modalOverlay.classList.add('active');
+        tile.classList.add('hiding');
+        
+        fetchGameDetailsAndAnimate(gameId, tileRect);
+    };
+
+    const fetchGameDetailsAndAnimate = async (gameId, tileRect) => {
+        modalBody.innerHTML = '';
+        
+        try {
+            const detailsPromise = fetch(`${BASE_URL}/games/${gameId}?key=${API_KEY}`).then(res => res.json());
+            const screenshotsPromise = fetch(`${BASE_URL}/games/${gameId}/screenshots?key=${API_KEY}`).then(res => res.json());
+            const [details, screenshots] = await Promise.all([detailsPromise, screenshotsPromise]);
+            
+            modalBody.innerHTML = `<h2>${details.name}</h2><p>${details.description_raw ? details.description_raw.substring(0, 500) : 'No description available.'}...</p><strong>Genres:</strong> ${details.genres.map(g => g.name).join(', ')}<br><strong>Release Date:</strong> ${details.released}<h3>Screenshots</h3><div id="modal-screenshots">${screenshots.results.slice(0, 6).map(ss => `<img src="${ss.image}" alt="Screenshot">`).join('')}</div>`;
+
+        } catch (error) {
+            modalBody.innerHTML = '<p>Could not load details.</p>';
+        } finally {
+            requestAnimationFrame(() => {
+                modalContainer.classList.add('active');
+                const targetWidth = Math.min(800, window.innerWidth - 40);
+                const targetHeight = Math.min(600, window.innerHeight - 40);
+                const targetX = (window.innerWidth - targetWidth) / 2;
+                const targetY = (window.innerHeight - targetHeight) / 2;
+                
+                modalContainer.style.transform = `translate(${targetX - tileRect.left}px, ${targetY - tileRect.top}px)`;
+                modalContainer.style.width = `${targetWidth}px`;
+                modalContainer.style.height = `${targetHeight}px`;
+            });
+        }
     };
     
+    const closeModal = () => {
+        if (!originalTile) return;
+        const tileRect = originalTile.getBoundingClientRect();
+        
+        modalContainer.style.transform = '';
+        modalContainer.style.width = `${tileRect.width}px`;
+        modalContainer.style.height = `${tileRect.height}px`;
+        
+        modalOverlay.classList.remove('active');
+        modalContainer.classList.remove('active');
+        
+        setTimeout(() => {
+            if (originalTile) originalTile.classList.remove('hiding');
+            originalTile = null;
+        }, 350);
+    };
+
     const updateUIWithVotes = () => {
         document.querySelectorAll('.game-tile').forEach(tile => {
             const gameId = tile.dataset.gameId;
@@ -248,26 +349,25 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPage = 1;
         hasNextPage = true;
         fetchGames(currentPage, false);
+        saveState();
     }
 
     gamesContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('vote-btn')) {
-            const gameId = e.target.dataset.gameId;
+            e.stopPropagation();
+            const gameId = e.target.closest('.game-tile').dataset.gameId;
             votedGames.has(gameId) ? votedGames.delete(gameId) : votedGames.add(gameId);
             updateUIWithVotes();
         }
     });
     
-    genreFilter.addEventListener('change', applyFilters);
-    tagsFilter.addEventListener('change', applyFilters);
+    [genreFilter, tagsFilter, dynamicFilter].forEach(filter => filter.addEventListener('change', applyFilters));
     
     libraryToggleBtn.addEventListener('click', () => {
         const isToggled = libraryToggleBtn.dataset.toggled === 'true';
         libraryToggleBtn.dataset.toggled = !isToggled;
         gamesContainer.classList.toggle('filter-library', !isToggled);
-        
-        // ** THE FIX **
-        // Give the browser a moment to apply the CSS filter before checking the scroll height.
+        saveState();
         setTimeout(checkAndLoadMore, 100); 
     });
 
@@ -280,6 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleFiltersBtn.addEventListener('click', () => {
         filtersPanel.classList.toggle('hidden');
         toggleFiltersBtn.textContent = filtersPanel.classList.contains('hidden') ? 'Show Filters' : 'Hide Filters';
+        saveState();
     });
     
     window.addEventListener('scroll', () => {
@@ -296,12 +397,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'my_game_votes.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = 'my_game_votes.json';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
     });
 
     importBtn.addEventListener('click', () => importInput.click());
@@ -331,15 +429,14 @@ document.addEventListener('DOMContentLoaded', () => {
     themeToggleBtn.addEventListener('click', () => {
         document.body.classList.toggle('dark-theme');
         document.body.classList.toggle('light-theme');
+        saveState();
     });
 
-    const openModal = (gameId) => fetchGameDetails(gameId);
-    closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
-    window.addEventListener('click', (e) => { if (e.target == modal) modal.style.display = 'none'; });
+    closeModalBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', closeModal);
 
     const showLoader = () => loader.style.display = 'block';
     const hideLoader = () => loader.style.display = 'none';
 
     fetchGenres();
-    fetchGames(currentPage);
 });

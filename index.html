@@ -22,17 +22,29 @@
 
     <main>
         <div class="controls-container">
-            <button id="toggle-filters-btn" class="header-action-btn">Hide Filters</button>
-            <div id="filters-panel" class="filters-panel">
+            <button id="toggle-filters-btn" class="header-action-btn">Show Filters</button>
+            <div id="filters-panel" class="filters-panel hidden">
                 <div class="filter-group">
                     <label for="search-bar">Search Game:</label>
                     <input type="text" id="search-bar" placeholder="E.g., Baldur's Gate 3">
                 </div>
                 <div class="filter-group">
+                    <label for="dynamic-filter">Trends & Releases:</label>
+                    <select id="dynamic-filter">
+                        <option value="">All Time</option>
+                        <optgroup label="---Releases---"></optgroup>
+                        <option value="this-month">This month</option>
+                        <option value="next-month">Next month</option>
+                        <optgroup label="---Trends---"></optgroup>
+                        <option value="popular-week">Popular this week</option>
+                        <option value="popular-month">Popular this month</option>
+                        <option value="popular-2024">Popular in 2024</option>
+                    </select>
+                </div>
+                <div class="filter-group">
                     <label for="genre-filter">Genre:</label>
                     <select id="genre-filter">
                         <option value="">All Genres</option>
-                        <!-- Genres will be populated by JavaScript -->
                     </select>
                 </div>
                 <div class="filter-group">
@@ -50,19 +62,17 @@
             </div>
         </div>
 
-        <div id="games-container" class="games-container">
-            <!-- Game tiles will be populated by JavaScript -->
-        </div>
-
+        <div id="games-container" class="games-container"></div>
         <div id="loader" class="loader"></div>
-
     </main>
 
-    <!-- Modal for Game Details -->
-    <div id="details-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <div id="modal-body"></div>
+    <!-- Animated Modal -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div id="modal-container" class="modal-container">
+            <div id="modal-content" class="modal-content">
+                <span id="close-modal-btn" class="close-button">&times;</span>
+                <div id="modal-body"></div>
+            </div>
         </div>
     </div>
 
