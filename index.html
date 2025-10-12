@@ -15,15 +15,19 @@
                 <button id="import-btn" class="header-action-btn">Import Votes</button>
                 <input type="file" id="import-input" accept=".json" style="display: none;" multiple>
                 <button id="share-btn" class="header-action-btn">Share My Votes</button>
-                <button id="theme-toggle-btn">Toggle Theme</button>
+                <button id="theme-toggle-btn" class="theme-toggle" title="Toggle Theme">🌙</button>
             </div>
         </div>
     </header>
 
     <main>
         <div class="controls-container">
-            <button id="toggle-filters-btn">Show Filters</button>
+            <button id="toggle-filters-btn" class="header-action-btn">Show Filters</button>
             <div id="filters-panel" class="filters-panel hidden">
+                <div class="filter-group">
+                    <label for="search-bar">Search Game:</label>
+                    <input type="text" id="search-bar" placeholder="E.g., Baldur's Gate 3">
+                </div>
                 <div class="filter-group">
                     <label for="genre-filter">Genre:</label>
                     <select id="genre-filter">
@@ -31,9 +35,17 @@
                         <!-- Genres will be populated by JavaScript -->
                     </select>
                 </div>
-                 <div class="filter-group">
-                    <label for="search-bar">Search Game:</label>
-                    <input type="text" id="search-bar" placeholder="E.g., Cyberpunk 2077">
+                <div class="filter-group">
+                    <label for="tags-filter">Mode:</label>
+                    <select id="tags-filter">
+                        <option value="">Any</option>
+                        <option value="multiplayer">Multiplayer</option>
+                        <option value="co-op">Co-operative</option>
+                    </select>
+                </div>
+                <div class="filter-group filter-group-checkbox">
+                    <input type="checkbox" id="library-filter">
+                    <label for="library-filter">Show only games in my library</label>
                 </div>
             </div>
         </div>
