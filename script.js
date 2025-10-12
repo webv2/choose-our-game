@@ -27,6 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateYearsList = document.getElementById('date-years-list');
     const dateSelectAllBtn = document.getElementById('date-select-all-btn');
     const backToTopBtn = document.getElementById('back-to-top-btn');
+
+    if (!orderingFilter) {
+        console.error("FATAL ERROR: The element with id='ordering-filter' was not found. Please check your HTML file.");
+        return;
+    }
     
     // --- STATE VARIABLES ---
     let originalTile = null,
@@ -37,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hasNextPage = true,
         selectedYears = new Set();
         
-    // --- UTILITY FUNCTIONS (MOVED TO TOP TO FIX REFERENCE ERROR) ---
+    // --- UTILITY FUNCTIONS ---
     const showLoader = () => loader.style.display = 'block';
     const hideLoader = () => loader.style.display = 'none';
 
@@ -164,7 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const tags = tagsFilter.value;
         const dynamic = dynamicFilter.value;
         const ordering = orderingFilter.value;
-        let url = `${BASE_URL}/games?key=${API_KEY}&page=${page}&page_size=24`;
+        
+        // --- THIS IS THE CHANGE: NSFW games are now filtered out automatically ---
+        let url = `${BASE_URL}/games?key=${API_KEY}&page=${page}&page_size=24&exclude_tags=499`;
 
         if (search) url += `&search=${search}&search_exact=true`;
         if (genre) url += `&genres=${genre}`;
@@ -414,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     [genreFilter, tagsFilter, dynamicFilter, orderingFilter].forEach(filter => {
-        if (filter) { // Safety check to prevent crash if an element is missing
+        if (filter) {
             filter.addEventListener('change', () => {
                 if (filter === dynamicFilter && filter.value) {
                     selectedYears.clear();
