@@ -2,8 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_KEY = '194e7b3728b04675acb4abd1ffb834f0';
     const BASE_URL = 'https://api.rawg.io/api';
 
-    // --- YOUR STEAM LIBRARY ---
-    // This Set contains a cleaned list of your Steam games for fast lookups.
     const mySteamLibrary = new Set([
         "anno 1800", "r.e.p.o.", "space colony", "buckshot roulette", "the forever winter", "zup! s",
         "zed zone", "command & conquer generals zero hour", "command & conquer red alert 3",
@@ -99,12 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
         "red orchestra 2: heroes of stalingrad", "left 4 dead 2", "dota 2", "dirt 3"
     ]);
 
-
+    // DOM Elements
     const gamesContainer = document.getElementById('games-container');
     const loader = document.getElementById('loader');
     const genreFilter = document.getElementById('genre-filter');
     const tagsFilter = document.getElementById('tags-filter');
-    const libraryFilter = document.getElementById('library-filter'); // New library filter
+    const libraryToggleBtn = document.getElementById('library-toggle-btn');
     const searchBar = document.getElementById('search-bar');
     const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
     const filtersPanel = document.getElementById('filters-panel');
@@ -112,36 +110,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const importBtn = document.getElementById('import-btn');
     const importInput = document.getElementById('import-input');
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    
-    const prevPageBtn = document.getElementById('prev-page-btn');
-    const nextPageBtn = document.getElementById('next-page-btn');
-    const pageIndicator = document.getElementById('page-indicator');
-
     const modal = document.getElementById('details-modal');
     const modalBody = document.getElementById('modal-body');
     const closeModalBtn = document.querySelector('.close-button');
 
+    // State variables
     let votedGames = new Set();
     let importedVotes = {};
     let currentPage = 1;
+    let isLoading = false;
+    let hasNextPage = true;
 
-    const fetchGames = async (page = 1, genre = '', tags = '', search = '') => {
+    // --- Core API Functions ---
+
+    const fetchGames = async (page = 1, append = false) => {
+        if (isLoading || !hasNextPage && append) return;
+        isLoading = true;
         showLoader();
-        let url = `${BASE_URL}/games?key=${API_KEY}&page=${page}&page_size=30`;
+
+        const genre = genreFilter.value;
+        const tags = tagsFilter.value;
+        const search = searchBar.value.trim();
+        
+        let url = `${BASE_URL}/games?key=${API_KEY}&page=${page}&page_size=24`;
         if (genre) url += `&genres=${genre}`;
         if (tags) url += `&tags=${tags}`;
         if (search) url += `&search=${search}`;
+        
+        if (!append) gamesContainer.innerHTML = '';
 
         try {
             const response = await fetch(url);
             const data = await response.json();
-            displayGames(data.results);
-            updatePagination(data.next, data.previous, page);
+            displayGames(data.results, append);
+            hasNextPage = data.next !== null;
         } catch (error) {
             console.error('Error fetching games:', error);
             gamesContainer.innerHTML = '<p>Failed to load games. Please try again later.</p>';
         } finally {
             hideLoader();
+            isLoading = false;
         }
     };
 
@@ -174,9 +182,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    const displayGames = (games) => {
-        gamesContainer.innerHTML = '';
-        if (games.length === 0) {
+    // --- Display & UI Functions ---
+
+    const displayGames = (games, append) => {
+        if (!append) gamesContainer.innerHTML = '';
+        if (games.length === 0 && !append) {
             gamesContainer.innerHTML = '<p>No games found matching your criteria.</p>';
             return;
         }
@@ -192,31 +202,28 @@ document.addEventListener('DOMContentLoaded', () => {
             gameTile.innerHTML = `
                 <img src="${game.background_image || ''}" alt="${game.name}" loading="lazy">
                 <div class="game-info">
-                    <h3>
-                        ${isOwned ? '<span class="owned-indicator" title="In your library">✔</span>' : ''}
-                        <span>${game.name}</span>
-                    </h3>
+                    <h3>${game.name}</h3>
                     <button class="vote-btn ${isVoted ? 'voted' : ''}" data-game-id="${game.id}">${isVoted ? 'Voted!' : 'Vote'}</button>
                 </div>
                 ${voteCount > 0 ? `<div class="vote-count" title="${voteCount} imported vote(s)">${voteCount}</div>` : ''}
             `;
             
             gameTile.querySelector('img').addEventListener('click', () => openModal(game.id));
-            gamesContainer.appendChild(gameTile);
+            if (append) gamesContainer.appendChild(gameTile);
+            else gamesContainer.innerHTML += gameTile.outerHTML; // Less performant but simpler for this context
         });
+
+        // Re-attach event listeners if not appending
+        if (!append) {
+             gamesContainer.querySelectorAll('.game-tile img').forEach(img => {
+                const gameId = img.closest('.game-tile').dataset.gameId;
+                img.addEventListener('click', () => openModal(gameId));
+            });
+        }
     };
 
     const displayGameDetails = (details, screenshots) => {
-        modalBody.innerHTML = `
-            <h2>${details.name}</h2>
-            <p>${details.description_raw.substring(0, 400)}...</p>
-            <strong>Genres:</strong> ${details.genres.map(g => g.name).join(', ')}<br>
-            <strong>Release Date:</strong> ${details.released}
-            <h3>Screenshots</h3>
-            <div id="modal-screenshots">
-                ${screenshots.slice(0, 6).map(ss => `<img src="${ss.image}" alt="Screenshot">`).join('')}
-            </div>
-        `;
+        modalBody.innerHTML = `<h2>${details.name}</h2><p>${details.description_raw.substring(0, 400)}...</p><strong>Genres:</strong> ${details.genres.map(g => g.name).join(', ')}<br><strong>Release Date:</strong> ${details.released}<h3>Screenshots</h3><div id="modal-screenshots">${screenshots.slice(0, 6).map(ss => `<img src="${ss.image}" alt="Screenshot">`).join('')}</div>`;
         modal.style.display = 'block';
     };
     
@@ -226,49 +233,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const voteBtn = tile.querySelector('.vote-btn');
             const voteCountDiv = tile.querySelector('.vote-count');
             
-            if (votedGames.has(gameId)) {
-                voteBtn.classList.add('voted');
-                voteBtn.textContent = 'Voted!';
-            } else {
-                voteBtn.classList.remove('voted');
-                voteBtn.textContent = 'Vote';
-            }
+            voteBtn.classList.toggle('voted', votedGames.has(gameId));
+            voteBtn.textContent = votedGames.has(gameId) ? 'Voted!' : 'Vote';
 
             const count = importedVotes[gameId] || 0;
             if (count > 0) {
-                if (voteCountDiv) {
-                    voteCountDiv.textContent = count;
-                } else {
-                    const newVoteCount = document.createElement('div');
-                    newVoteCount.className = 'vote-count';
-                    newVoteCount.title = `${count} imported vote(s)`;
-                    newVoteCount.textContent = count;
-                    tile.appendChild(newVoteCount);
-                }
-            } else { if (voteCountDiv) voteCountDiv.remove(); }
+                if (voteCountDiv) voteCountDiv.textContent = count;
+                else tile.insertAdjacentHTML('beforeend', `<div class="vote-count" title="${count} imported vote(s)">${count}</div>`);
+            } else if (voteCountDiv) voteCountDiv.remove();
         });
     };
-    
+
+    // --- Event Handlers ---
+
+    function applyFilters() {
+        currentPage = 1;
+        hasNextPage = true; // Reset for new search
+        fetchGames(currentPage, false);
+    }
+
     gamesContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('vote-btn')) {
             const gameId = e.target.dataset.gameId;
-            if (votedGames.has(gameId)) {
-                votedGames.delete(gameId);
-            } else { votedGames.add(gameId); }
+            votedGames.has(gameId) ? votedGames.delete(gameId) : votedGames.add(gameId);
             updateUIWithVotes();
         }
     });
     
-    function applyFilters() {
-        currentPage = 1;
-        fetchGames(currentPage, genreFilter.value, tagsFilter.value, searchBar.value.trim());
-    }
-
     genreFilter.addEventListener('change', applyFilters);
     tagsFilter.addEventListener('change', applyFilters);
     
-    libraryFilter.addEventListener('change', () => {
-        gamesContainer.classList.toggle('filter-library', libraryFilter.checked);
+    libraryToggleBtn.addEventListener('click', () => {
+        const isToggled = libraryToggleBtn.dataset.toggled === 'true';
+        libraryToggleBtn.dataset.toggled = !isToggled;
+        gamesContainer.classList.toggle('filter-library', !isToggled);
     });
 
     let searchTimeout;
@@ -282,31 +280,18 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleFiltersBtn.textContent = filtersPanel.classList.contains('hidden') ? 'Show Filters' : 'Hide Filters';
     });
     
-    const updatePagination = (nextUrl, prevUrl, page) => {
-        nextPageBtn.disabled = !nextUrl;
-        prevPageBtn.disabled = !prevUrl;
-        pageIndicator.textContent = `Page ${page}`;
-    };
-
-    nextPageBtn.addEventListener('click', () => {
-        if (!nextPageBtn.disabled) {
+    // Infinite Scroll
+    window.addEventListener('scroll', () => {
+        if (isLoading || !hasNextPage) return;
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500) {
             currentPage++;
-            fetchGames(currentPage, genreFilter.value, tagsFilter.value, searchBar.value);
+            fetchGames(currentPage, true);
         }
     });
 
-    prevPageBtn.addEventListener('click', () => {
-        if (!prevPageBtn.disabled) {
-            currentPage--;
-            fetchGames(currentPage, genreFilter.value, tagsFilter.value, searchBar.value);
-        }
-    });
-
+    // Import/Export and other buttons...
     shareBtn.addEventListener('click', () => {
-        if (votedGames.size === 0) {
-            alert('You haven\'t voted for any games yet!');
-            return;
-        }
+        if (votedGames.size === 0) { alert('You haven\'t voted for any games yet!'); return; }
         const data = JSON.stringify(Array.from(votedGames));
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -320,10 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     importBtn.addEventListener('click', () => importInput.click());
-
     importInput.addEventListener('change', (e) => {
         const files = e.target.files;
-        if (files.length === 0) return;
+        if (!files.length) return;
         importedVotes = {};
         Array.from(files).forEach(file => {
             const reader = new FileReader();
@@ -337,10 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         updateUIWithVotes();
                     }
-                } catch (err) {
-                    console.error('Error reading file:', err);
-                    alert(`Could not read file: ${file.name}`);
-                }
+                } catch (err) { console.error('Error reading file:', err); alert(`Could not read file: ${file.name}`); }
             };
             reader.readAsText(file);
         });
@@ -352,22 +333,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.toggle('light-theme');
     });
 
+    // Modal Logic...
     const openModal = (gameId) => fetchGameDetails(gameId);
     closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
-    window.addEventListener('click', (e) => {
-        if (e.target == modal) modal.style.display = 'none';
-    });
+    window.addEventListener('click', (e) => { if (e.target == modal) modal.style.display = 'none'; });
 
-    const showLoader = () => {
-        loader.style.display = 'block';
-        gamesContainer.style.display = 'none';
-    };
+    // Utility Functions...
+    const showLoader = () => loader.style.display = 'block';
+    const hideLoader = () => loader.style.display = 'none';
 
-    const hideLoader = () => {
-        loader.style.display = 'none';
-        gamesContainer.style.display = 'grid';
-    };
-
+    // --- Initial Load ---
     fetchGenres();
     fetchGames(currentPage);
 });

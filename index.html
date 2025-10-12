@@ -22,8 +22,8 @@
 
     <main>
         <div class="controls-container">
-            <button id="toggle-filters-btn" class="header-action-btn">Show Filters</button>
-            <div id="filters-panel" class="filters-panel hidden">
+            <button id="toggle-filters-btn" class="header-action-btn">Hide Filters</button>
+            <div id="filters-panel" class="filters-panel">
                 <div class="filter-group">
                     <label for="search-bar">Search Game:</label>
                     <input type="text" id="search-bar" placeholder="E.g., Baldur's Gate 3">
@@ -43,9 +43,9 @@
                         <option value="co-op">Co-operative</option>
                     </select>
                 </div>
-                <div class="filter-group filter-group-checkbox">
-                    <input type="checkbox" id="library-filter">
-                    <label for="library-filter">Show only games in my library</label>
+                <div class="filter-group">
+                    <label>Library:</label>
+                    <button id="library-toggle-btn" class="toggle-btn" data-toggled="false">Author Owned Games</button>
                 </div>
             </div>
         </div>
@@ -56,11 +56,6 @@
 
         <div id="loader" class="loader"></div>
 
-        <div class="pagination">
-             <button id="prev-page-btn" disabled>Previous</button>
-             <span id="page-indicator">Page 1</span>
-             <button id="next-page-btn">Next</button>
-        </div>
     </main>
 
     <!-- Modal for Game Details -->

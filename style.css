@@ -5,7 +5,6 @@
     --primary-color: #007bff;
     --primary-hover: #0056b3;
     --border-color-light: #ddd;
-    --owned-indicator-color: #28a745;
 
     --bg-color-dark: #121212;
     --text-color-dark: #e0e0e0;
@@ -33,8 +32,9 @@ body {
 }
 .light-theme .vote-btn.voted { background-color: #28a745; }
 .light-theme select, .light-theme input { border: 1px solid var(--border-color-light); }
-.light-theme .theme-toggle { background-color: var(--bg-color-dark); } /* Will turn dark */
-
+.light-theme .theme-toggle { background-color: #000000; } /* Set to black */
+.light-theme .toggle-btn { background-color: #e0e0e0; color: #333; }
+.light-theme .toggle-btn[data-toggled="true"] { background-color: var(--primary-color); color: white; }
 
 /* Dark Theme */
 .dark-theme {
@@ -54,8 +54,9 @@ body {
     background-color: #2a2a2a;
     color: var(--text-color-dark);
 }
-.dark-theme .theme-toggle { background-color: var(--bg-color-light); color: black; } /* Will turn light */
-
+.dark-theme .theme-toggle { background-color: var(--card-bg-dark); border: 1px solid #333; } /* Merge with header */
+.dark-theme .toggle-btn { background-color: #333; color: #e0e0e0; border: 1px solid #555;}
+.dark-theme .toggle-btn[data-toggled="true"] { background-color: var(--primary-color); border-color: var(--primary-color); }
 
 header {
     padding: 1rem;
@@ -102,7 +103,7 @@ h1 {
     color: white;
     cursor: pointer;
     font-size: 1.2rem;
-    line-height: 40px; /* Aligns emoji */
+    line-height: 40px;
     text-align: center;
     transition: background-color 0.3s, transform 0.3s;
     flex-shrink: 0;
@@ -126,42 +127,25 @@ main {
 }
 .filters-panel.hidden { display: none; }
 .filter-group { display: flex; flex-direction: column; }
-.filter-group-checkbox {
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
-    padding-bottom: 8px; /* Align with other inputs */
-}
 .filter-group label { margin-bottom: 5px; font-weight: bold; }
-.filter-group-checkbox label { margin-bottom: 0; }
-.filter-group select, .filter-group input { padding: 8px; border-radius: 5px; font-size: 1rem; }
+.filter-group select, .filter-group input, .filter-group .toggle-btn { padding: 8px; border-radius: 5px; font-size: 1rem; }
+.toggle-btn {
+    border: none;
+    cursor: pointer;
+    padding: 9px 15px;
+    transition: background-color 0.2s, color 0.2s;
+}
 
 .games-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-/* New rule for library filtering */
-.games-container.filter-library .game-tile:not(.owned-game) {
-    display: none;
-}
+.games-container.filter-library .game-tile:not(.owned-game) { display: none; }
 
 .game-tile { border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; transition: transform 0.2s; }
 .game-tile:hover { transform: translateY(-5px); }
 .game-tile img { width: 100%; height: 280px; object-fit: cover; display: block; }
 .game-info { padding: 1rem; }
-.game-info h3 { 
-    margin: 0 0 10px 0; 
-    font-size: 1.1rem; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.owned-indicator { color: var(--owned-indicator-color); font-size: 1rem; }
+.game-info h3 { margin: 0 0 10px 0; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vote-btn { width: 100%; padding: 10px; border: none; color: white; cursor: pointer; font-size: 1rem; transition: background-color 0.2s; }
 .vote-count { position: absolute; top: 10px; right: 10px; background-color: rgba(255, 0, 0, 0.8); color: white; padding: 5px 8px; border-radius: 50%; font-weight: bold; font-size: 0.9rem; }
-.pagination { text-align: center; margin: 2rem 0; }
-.pagination button { padding: 10px 20px; margin: 0 10px; cursor: pointer; }
-.pagination button:disabled { cursor: not-allowed; opacity: 0.5; }
 .loader { border: 8px solid #f3f3f3; border-top: 8px solid var(--primary-color); border-radius: 50%; width: 60px; height: 60px; animation: spin 2s linear infinite; margin: 40px auto; display: none; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
