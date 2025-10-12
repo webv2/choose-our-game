@@ -527,5 +527,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Load ---
     populateDateRanges();
-    fetchGenres(); // This handles the first call to loadState and applyFilters
+    fetchGenres(); // This handles the first call to loadState and applyFilters *uto el que lea
 });
+
