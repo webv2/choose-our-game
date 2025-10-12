@@ -119,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isLoading = false;
     let hasNextPage = true;
 
-    // --- NEW Function to handle loading more games if content is not scrollable ---
     const checkAndLoadMore = () => {
         if (isLoading || !hasNextPage) return;
 
@@ -159,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             hideLoader();
             isLoading = false;
-            // After loading, check if we need to load even more.
             checkAndLoadMore();
         }
     };
@@ -215,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3>${game.name}</h3>
                     <button class="vote-btn ${isVoted ? 'voted' : ''}" data-game-id="${game.id}">${isVoted ? 'Voted!' : 'Vote'}</button>
                 </div>
-                ${voteCount > 0 ? `<div class="vote-count" title="${voteCount} imported vote(s)">${voteCount}</div>` : ''}
+                ${voteCount > 0 ? `<div class="vote-count" title="${voteCount} imported vote(s)">${count}</div>` : ''}
             `;
             
             gameTile.querySelector('img').addEventListener('click', () => openModal(game.id));
@@ -267,8 +265,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const isToggled = libraryToggleBtn.dataset.toggled === 'true';
         libraryToggleBtn.dataset.toggled = !isToggled;
         gamesContainer.classList.toggle('filter-library', !isToggled);
-        // After toggling, check if we need to load more games
-        checkAndLoadMore();
+        
+        // ** THE FIX **
+        // Give the browser a moment to apply the CSS filter before checking the scroll height.
+        setTimeout(checkAndLoadMore, 100); 
     });
 
     let searchTimeout;
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         a.href = url;
         a.download = 'my_game_votes.json';
         document.body.appendChild(a);
-a.click();
+        a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
