@@ -75,8 +75,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const showLoader = () => loader.style.display = 'block';
     const hideLoader = () => loader.style.display = 'none';
 
-    const saveState = () => { /* ... (same as before) ... */ };
-    const loadState = () => { /* ... (same as before) ... */ };
+    const saveState = () => {
+        const state = {
+            theme: document.body.classList.contains('dark-theme') ? 'dark' : 'light',
+            filtersVisible: !filtersPanel.classList.contains('hidden'),
+            search: searchBar.value,
+            genre: genreFilter.value,
+            tags: tagsFilter.value,
+            dynamic: dynamicFilter.value,
+            ordering: orderingFilter.value,
+            libraryToggled: libraryToggleBtn.dataset.toggled === 'true',
+            selectedYears: Array.from(selectedYears)
+        };
+        localStorage.setItem('gameHubState', JSON.stringify(state));
+    };
+
+    const loadState = () => {
+        const savedState = localStorage.getItem('gameHubState');
+        if (savedState) {
+            const state = JSON.parse(savedState);
+
+            if (state.theme === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.body.classList.remove('light-theme');
+            } else {
+                document.body.classList.add('light-theme');
+                document.body.classList.remove('dark-theme');
+            }
+
+            if (state.filtersVisible) {
+                filtersPanel.classList.remove('hidden');
+                toggleFiltersBtn.textContent = 'Hide Filters';
+            }
+
+            searchBar.value = state.search || '';
+            genreFilter.value = state.genre || '';
+            tagsFilter.value = state.tags || '';
+            dynamicFilter.value = state.dynamic || '';
+            orderingFilter.value = state.ordering || '';
+            libraryToggleBtn.dataset.toggled = state.libraryToggled || 'false';
+            gamesContainer.classList.toggle('filter-library', state.libraryToggled);
+            selectedYears = new Set(state.selectedYears || []);
+        }
+    };
 
     // --- CORE DATA & DISPLAY FUNCTIONS ---
     const applyFilters = () => {
@@ -325,9 +366,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const populateDateRanges = () => { /* ... (same as before) ... */ };
-    const populateYears = (start, end) => { /* ... (same as before) ... */ };
-    const updateDateFilterButtonText = () => { /* ... (same as before) ... */ };
+    const populateDateRanges = () => {
+        const ranges = [ { label: '2020-Now', start: 2020, end: new Date().getFullYear() }, { label: '2010-2019', start: 2010, end: 2019 }, { label: '2000-2009', start: 2000, end: 2009 }, { label: '1990-1999', start: 1990, end: 1999 }, { label: 'Before 1990', start: 1950, end: 1989 } ];
+        ranges.forEach(range => {
+            const li = document.createElement('li');
+            li.textContent = range.label;
+            li.dataset.start = range.start;
+            li.dataset.end = range.end;
+            dateRangesList.appendChild(li);
+        });
+    };
+    const populateYears = (start, end) => {
+        dateYearsList.innerHTML = '';
+        for (let year = end; year >= start; year--) {
+            const li = document.createElement('li');
+            li.textContent = year;
+            li.dataset.year = year;
+            if (selectedYears.has(String(year))) li.classList.add('selected');
+            dateYearsList.appendChild(li);
+        }
+    };
+    const updateDateFilterButtonText = () => {
+        if (selectedYears.size === 0) {
+            dateFilterBtn.textContent = 'Any Date';
+        } else if (selectedYears.size === 1) {
+            dateFilterBtn.textContent = `${Array.from(selectedYears)[0]}`;
+        } else {
+            dateFilterBtn.textContent = `${selectedYears.size} years selected`;
+        }
+    };
 
     const fetchGenres = async () => {
         try {
