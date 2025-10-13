@@ -157,8 +157,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gameIds = voteData.map(g => g.game_id).join(','); // Get all IDs
                 // Fetch from RAWG using the IDs, but now with pagination
                 const response = await fetch(`${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&ids=${gameIds}&page=${page}&page_size=40`);
-                const rawgData = await response.json();
-                displayGames(rawgData.results, append); // RAWG results are already ordered by the 'ids' parameter sequence, but we re-sort just in case.
+                const rawgData = await response.json(); 
+                
+                // Re-sort the results from RAWG to match the order from Supabase.
+                const sortedGames = rawgData.results.sort((a, b) => {
+                    return (voteCounts.get(b.id) || 0) - (voteCounts.get(a.id) || 0);
+                });
+                displayGames(sortedGames, append);
                 hasNextPage = rawgData.next !== null;
             } else {
                 // --- MODIFIED: Build exclude_tags list dynamically ---
