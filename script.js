@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dynamic: dynamicFilter.value,
             ordering: orderingFilter.value,
             libraryToggled: libraryToggleBtn.dataset.toggled === 'true',
+            excludedTags: Array.from(document.querySelectorAll('.exclude-tag-checkbox:checked')).map(cb => cb.value),
             selectedYears: Array.from(selectedYears)
         };
         localStorage.setItem('gameHubState', JSON.stringify(state));
@@ -115,6 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
             orderingFilter.value = state.ordering || '';
             libraryToggleBtn.dataset.toggled = state.libraryToggled || 'false';
             gamesContainer.classList.toggle('filter-library', state.libraryToggled);
+            if (state.excludedTags) {
+                document.querySelectorAll('.exclude-tag-checkbox').forEach(cb => {
+                    cb.checked = state.excludedTags.includes(cb.value);
+                });
+            }
             selectedYears = new Set(state.selectedYears || []);
         }
     };
@@ -137,27 +143,39 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             if (ordering === 'votes') {
-                const { data: voteData, error } = await supabaseClient.from('games').select('game_id, votes').order('votes', { ascending: false });
+                // Fetch all voted games from Supabase to get the correct order
+                const { data: voteData, error } = await supabaseClient
+                    .from('games')
+                    .select('game_id, votes')
+                    .order('votes', { ascending: false });
                 if (error) throw error;
                 if (voteData.length === 0) {
                     displayGames([], false);
                     return;
                 }
                 voteData.forEach(item => voteCounts.set(item.game_id, item.votes));
-                const gameIds = voteData.map(g => g.game_id).join(',');
-                const response = await fetch(`${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&ids=${gameIds}`);
+                const gameIds = voteData.map(g => g.game_id).join(','); // Get all IDs
+                // Fetch from RAWG using the IDs, but now with pagination
+                const response = await fetch(`${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&ids=${gameIds}&page=${page}&page_size=40`);
                 const rawgData = await response.json();
-                const sortedResults = rawgData.results.sort((a, b) => (voteCounts.get(b.id) || 0) - (voteCounts.get(a.id) || 0));
-                displayGames(sortedResults, append);
-                hasNextPage = false;
+                displayGames(rawgData.results, append); // RAWG results are already ordered by the 'ids' parameter sequence, but we re-sort just in case.
+                hasNextPage = rawgData.next !== null;
             } else {
-                let url = `${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&page=${page}&page_size=24&exclude_tags=499`;
+                // --- MODIFIED: Build exclude_tags list dynamically ---
+                const excludedTagsFromCheckboxes = Array.from(document.querySelectorAll('.exclude-tag-checkbox:checked')).map(cb => cb.value);
+                const allExcludedTags = new Set(['498', ...excludedTagsFromCheckboxes]); // 498 is for NSFW
+                const excludeQuery = Array.from(allExcludedTags).join(',');
+
+                let url = `${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&page=${page}&page_size=24`;
+                if (excludeQuery) {
+                    url += `&exclude_tags=${excludeQuery}`;
+                }
                 const search = searchBar.value.trim();
                 const genre = genreFilter.value;
                 const tags = tagsFilter.value;
                 const dynamic = dynamicFilter.value;
                 const dates = getDatesForFilter(dynamic);
-                if (search) url += `&search=${search}`;
+                if (search) url += `&search=${search}&search_exact=true`;
                 if (genre) url += `&genres=${genre}`;
                 if (tags) url += `&tags=${tags}`;
                 if (ordering) url += `&ordering=${ordering}`;
@@ -423,6 +441,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             applyFilters();
         });
+    });
+
+    document.getElementById('exclude-tags-container').addEventListener('change', (e) => {
+        if (e.target.classList.contains('exclude-tag-checkbox')) applyFilters();
     });
 
     let searchTimeout;
