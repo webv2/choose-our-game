@@ -1,8 +1,3 @@
-/*
- * FINAL SCRIPT - Version with Supabase Voting & Report Modal
- * New Feature:
- * 1. Added a client-side keyword blocklist to hide games that are not tagged correctly as NSFW.
- */
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
     const RAWG_API_KEY = '194e7b3728b04675acb4abd1ffb834f0';
@@ -12,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SUPABASE_URL = 'https://lgtajqxzcgutovcqwepe.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGFqcXh6Y2d1dG92Y3F3ZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDg3NjIsImV4cCI6MjA3NTc4NDc2Mn0.QKnnpZ4fHrgpSeCeyJ2qVOJUqafd3jxRF4j5uMenMbg';
 
-    // --- NEW: KEYWORD BLOCKLIST ---
+    // --- KEYWORD BLOCKLIST ---
     // Add any lowercase words here you want to hide from the results.
     const KEYWORD_BLOCKLIST = new Set([
         'milf',
@@ -68,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedYears = new Set();
     let originalTile = null;
 
-    // --- YOUR STEAM LIBRARY ---
+    // --- MY STEAM LIBRARY ---
     const mySteamLibrary = new Set([ "anno 1800", "r.e.p.o.", "space colony", "buckshot roulette", "the forever winter", "zup! s", "zed zone", "command & conquer generals zero hour", "command & conquer red alert 3", "command & conquer: red alert 3 - uprising", "command and conquer: kane's wrath", "command & conquer and the covert operations", "command & conquer 4 tiberian twilight", "command & conquer 3 tiberium wars", "command & conquer red alert, counterstrike and the aftermath", "command & conquer red alert 2 and yuri’s revenge", "command & conquer generals", "command & conquer tiberian sun and firestorm", "command & conquer renegade", "x4: hyperion pack", "path of exile 2", "x-com 3: apocalypse", "tannenberg", "batman arkham origins", "prey", "mad max", "assassin's creed", "battlefield 1", "outpost", "manor lords", "hogwarts legacy", "unknown 9: awakening", "warhammer 40,000: space marine 2", "tom clancy’s the division 2", "the crew 2", "sins of a solar empire ii", "silica", "x4: timelines", "homeworld 3", "populous: the beginning", "mount & blade ii: bannerlord", "lost ember", "mafia trilogy", "besiege", "spellforce 3: fallen god", "spellforce 3: soul harvest", "celestial command", "worms armageddon", "stormworks: build and rescue", "carrier command 2", "crysis remastered", "brigador: up-armored edition", "sky force reloaded", "call of duty: infinite warfare", "marvel's avengers", "microsoft flight simulator", "terraria", "tzar: the burden of the crown", "titanfall 2", "technicity", "crossfire: legion", "krush kill 'n destroy xtreme", "rolling line", "sid meier's civilization vi", "δv: rings of saturn", "lost planet: extreme condition", "metro exodus", "golf it!", "lost planet 3", "into the radius vr", "wolfenstein ii: the new colossus", "swordsman vr", "iron rebellion", "endless space 2", "agos - a game of space", "icarus", "automobilista 2", "humankind", "the pioneers: surviving desolation", "battlefield 2042", "just cause 4", "city car driving", "dimensions: dreadnought architect", "main assembly", "mecha knights: nightmare", "call to arms", "warhammer 40,000: dawn of war iii", "grid", "dragon age ii", "mass effect legendary edition", "mass effect: andromeda", "dragon age: inquisition", "dragon age: origins", "grid legends", "need for speed unbound", "need for speed payback", "need for speed heat", "dirt 5", "need for speed hot pursuit remastered", "x4: kingdom end", "silent sector", "frontier pilot simulator", "the ascent", "rebel galaxy", "master of orion", "assetto corsa competizione", "infraspace", "wolcen: lords of mayhem", "juno: new origins", "command & conquer remastered collection", "stranded deep", "ixion", "contractors vr", "7 days to die", "spacerift: arcanum system", "star wars: empire at war", "zero caliber vr", "mechwarrior 5: mercenaries", "battlegroupvr", "spellforce 3 reforged", "osiris: new dawn", "evolve", "battlestar galactica deadlock", "tom clancy's ghost recon future soldier", "death stranding director's cut", "star wars jedi: fallen order", "dragon's dogma: dark arisen", "the forgotten city", "x4: tides of avarice", "flight of nova", "naruto to boruto: shinobi striker", "tomb raider: anniversary", "tomb raider: legend", "beamng.drive", "darkstone", "astrox imperium", "kingdoms and castles", "ultimate epic battle simulator 2", "fallout 76", "red solstice 2: survivors", "motor town: behind the wheel", "starship evo", "dead space 3", "encased", "mechwarrior 5: mercenaries", "starcom: nexus", "pulsar: lost colony", "highfleet", "boneworks", "executive assault 2", "valheim", "void destroyer 2", "project zomboid", "middle-earth: shadow of mordor", "warhammer 40,000: inquisitor - martyr", "parkan 2", "warhammer: end times - vermintide", "after the fall", "carx drift racing online", "retrowave", "survivalist: invisible strain", "zomday", "rebel galaxy outlaw", "assetto corsa", "phasmophobia", "middle-earth: shadow of war", "ground control anthology", "gothic universe edition", "last epoch", "hellsplit: arena", "gaia beyond", "cepheus protocol", "blackwake", "magicka 2", "car mechanic simulator 2015", "avorion", "x4: cradle of humanity", "atom: rpg", "kingdoms", "blade & sorcery", "cyberpunk 2077", "metal gear solid v: the definitive experience", "deep rock galactic", "insurgency: sandstorm", "green hell", "death stranding", "cyubevr", "crazy machines 3", "pummel party", "hand simulator", "aliens vs. predator", "half-life: alyx", "bulletstorm: full clip edition", "horizon zero dawn", "avorion", "gray zone", "the elder scrolls v: skyrim special edition", "injustice: gods among us", "dead by daylight", "holoball", "bad guys at school", "rodina", "pavlov", "project freedom", "genesis alpha one", "ultimate epic battle simulator", "scrap mechanic", "star valor", "voxel turf", "final fantasy xv", "diablo III", "dirt rally 2.0", "x4: split vendetta", "my time at portia", "halo: the master chief collection", "doom", "beat hazard 2", "age of empires ii: definitive edition", "state of aay 2", "arma 3", "generation zero", "hellblade: senua's sacrifice", "age of empires: definitive edition", "hurtworld", "transport fever 2", "homeworld: deserts of kharak", "mordhau", "transport fever", "kenshi", "state of decay: year one", "gun club vr", "arizona sunshine", "nexus - the jupiter incident", "how to survive 2", "endless space", "take on mars", "drift86", "fallout 4", "the guild 3", "kingdom come: deliverance", "signal simulator", "spaceengine", "borderlands: the pre-sequel", "age of empires ii", "the incredible adventures of van helsing ii", "kerbal space program", "home design 3d", "warhammer: vermintide 2", "killing floor 2", "titans of space plus", "battlezone combat commander", "battlezone 98 redux", "project cars 2", "heroes of might and magic v", "carmageddon: max damage", "just cause 3", "beat saber", "lords of the fallen", "spacebourne", "stellaris", "final fantasy xv", "rainbow six siege", "fallout 4 vr", "empyrion - galactic survival", "starpoint gemini warlords", "x4: foundations", "rage", "bioshock infinite", "rise of the tomb raider", "murderous pursuits", "saints row iv", "nightstar", "cities: skylines", "z", "battlevoid: sector siege", "f.e.a.r.", "battlefield: bad company 2", "everspace", "delta force 2", "need for speed: hot pursuit", "supreme commander 2", "the sims 3", "american truck simulator", "euro truck simulator 2", "titan quest", "insurgency", "the crew", "grand theft auto v", "hitman: contracts", "hitman: absolution", "hitman: blood money", "hitman 2: silent assassin", "hitman: codename 47", "saints row: the third", "overlord", "overlord ii", "space engineers", "mirror's edge", "just cause 3", "assassin's creed: brotherhood", "assassin's creed ii", "stellaris", "planetary annihilation: titans", "f1 2015", "aliens vs predator", "beat hazard", "supreme commander 2", "deus ex", "the polynomial", "hard truck: apocalypse rise of clans", "hard truck apocalypse: arcade", "hard truck apocalypse", "commandos", "project 5: sightseer", "the red solstice", "cpucpres", "black mesa", "rust", "deus ex: mankind divided", "kingdom: classic", "x-superbox", "x rebirth", "zombie driver hd", "h1z1", "the witcher 3: wild hunt", "sanctum 2", "grid 2", "dirt rally", "dungeon siege iii", "outlast", "the elder scrolls iv: oblivion", "no man's sky", "three heroes", "ground control ii", "dying light", "wayward terran frontier: zero falls", "payday 2", "wallpaper engine", "homefront: the revolution", "dirt showdown", "deep dungeons of doom", "tom clancy's the division", "mount & blade: with fire & sword", "metro 2033 redux", "metro: last light redux", "grid", "elite dangerous: horizons", "warhammer 40,000: space marine", "spore", "battlevoid: harbinger", "the forest", "original war", "deus ex: human revolution", "red faction", "assassin's creed revelations", "microsoft flight simulator x", "homeworld remastered collection", "sins of a solar empire: rebellion", "the witcher", "the witcher 2: assassins of kings", "guardians of orion", "call of a duty: modern warfare 3", "serious sam hd: the second encounter", "orion: prelude", "deadpool", "star wolves 3: civil war", "star wolves 2", "star wolves", "valve complete pack", "echelon", "ryse: son of rome", "echelon: wind warriors", "mount & blade: warband", "test drive unlimited 2", "earth 2150 trilogy", "earth 2140", "earth 2160", "elite: dangerous", "garry's mod", "planetary annihilation", "fallout 3", "fallout: new vegas", "fallout classic collection", "s.t.a.l.k.e.r.: clear sky", "s.t.a.l.k.e.r.: call of pripyat", "s.t.a.l.k.e.r.: shadow of chernobyl", "the guild", "dawn of war", "weird worlds: return to infinite space", "pressure", "realms of arkania: star trail", "pixel piracy", "zeno clash", "dino d-day", "spoiler alert", "space rangers hd: a war apart", "afterfall insanity", "metro 2033", "tomb raider", "thief", "red orchestra 2: heroes of stalingrad", "left 4 dead 2", "dota 2", "dirt 3" ]);
 
     // --- UTILITY & STATE FUNCTIONS ---
@@ -125,6 +120,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- Fetch all vote counts on initial load ---
+    const fetchInitialVoteCounts = async () => {
+        // This function ensures we have the vote data ready for sorting and display
+        // without having to re-fetch it every time.
+        const { data, error } = await supabaseClient
+            .from('games')
+            .select('game_id, votes');
+
+        if (error) {
+            console.error('Error fetching initial vote counts:', error);
+        } else if (data) {
+            data.forEach(item => voteCounts.set(item.game_id, item.votes));
+        }
+    };
+
     // --- CORE DATA & DISPLAY FUNCTIONS ---
     const applyFilters = () => {
         currentPage = 1;
@@ -143,30 +153,36 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             if (ordering === 'votes') {
-                // Fetch all voted games from Supabase to get the correct order
+                // --- Paginate the Supabase query ---
+                const pageSize = 40;
+                const from = (page - 1) * pageSize;
+                const to = from + pageSize - 1;
+
                 const { data: voteData, error } = await supabaseClient
                     .from('games')
                     .select('game_id, votes')
-                    .order('votes', { ascending: false });
+                    .order('votes', { ascending: false })
+                    .range(from, to);
+
                 if (error) throw error;
+
                 if (voteData.length === 0) {
-                    displayGames([], false);
+                    displayGames([], append);
+                    hasNextPage = false; // No more pages from Supabase
                     return;
                 }
-                voteData.forEach(item => voteCounts.set(item.game_id, item.votes));
-                const gameIds = voteData.map(g => g.game_id).join(','); // Get all IDs
-                // Fetch from RAWG using the IDs, but now with pagination
+
+                const gameIds = voteData.map(g => g.game_id).join(',');
                 const response = await fetch(`${RAWG_BASE_URL}/games?key=${RAWG_API_KEY}&ids=${gameIds}&page=${page}&page_size=40`);
                 const rawgData = await response.json(); 
                 
-                // Re-sort the results from RAWG to match the order from Supabase.
                 const sortedGames = rawgData.results.sort((a, b) => {
                     return (voteCounts.get(b.id) || 0) - (voteCounts.get(a.id) || 0);
                 });
                 displayGames(sortedGames, append);
                 hasNextPage = rawgData.next !== null;
             } else {
-                // --- MODIFIED: Build exclude_tags list dynamically ---
+                // --- Build exclude_tags list dynamically ---
                 const excludedTagsFromCheckboxes = Array.from(document.querySelectorAll('.exclude-tag-checkbox:checked')).map(cb => cb.value);
                 const allExcludedTags = new Set(['498', ...excludedTagsFromCheckboxes]); // 498 is for NSFW
                 const excludeQuery = Array.from(allExcludedTags).join(',');
@@ -206,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayGames = (games, append) => {
         if (!append) gamesContainer.innerHTML = '';
         
-        // --- NEW: Filter the results using the blocklist before displaying ---
+        // --- Filter the results using the blocklist before displaying ---
         const filteredGames = games.filter(game => {
             const lowerCaseName = game.name.toLowerCase();
             for (const keyword of KEYWORD_BLOCKLIST) {
@@ -429,8 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.textContent = genre.name;
                 genreFilter.appendChild(option);
             });
+            // After genres are fetched, load the saved state
             loadState();
+            // Then update the UI elements based on the loaded state
             updateDateFilterButtonText();
+            // Finally, fetch the games based on the current (possibly loaded) filters
             applyFilters();
         } catch (error) {
             console.error('Error fetching genres:', error);
@@ -550,5 +569,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Load ---
     populateDateRanges(); // *uto el que lo lea
-    fetchGenres();
+    (async () => {
+        await fetchInitialVoteCounts(); // Wait for votes to be loaded first
+        fetchGenres(); // This will then call loadState and applyFilters
+    })();
 });
