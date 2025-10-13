@@ -6,9 +6,6 @@
     <title>Choose Our Game</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
-    <!-- RECOMMENDED: Use a specific, stable version of Supabase JS from their CDN.
-         This helps prevent unexpected changes or issues with the generic @2 link.
-         I'm using 2.39.8 as an example; check Supabase documentation for the latest recommended stable version. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.min.js"></script> 
 </head>
 <body class="light-theme">
@@ -33,7 +30,7 @@
         <div class="controls-container">
             <button id="toggle-filters-btn" class="header-action-btn">Show Filters</button>
             <div id="filters-panel" class="filters-panel hidden">
-                <!-- NEW Order By Filter -->
+                <!--  Order By Filter -->
                 <div class="filter-group">
                     <label for="ordering-filter">Order by:</label>
                     <select id="ordering-filter">
@@ -91,13 +88,10 @@
                 <div class="filter-group">
                     <label>Exclude Modes:</label>
                     <div id="exclude-tags-container" class="checkbox-group">
-                        <label><input type="checkbox" class="exclude-tag-checkbox" value="multiplayer"> Multiplayer</label>
-                        <label><input type="checkbox" class="exclude-tag-checkbox" value="mmo"> MMO</label>
+                        <label><input type="checkbox" class="exclude-tag-checkbox" value="7"> Multiplayer</label>
+                        <label><input type="checkbox" class="exclude-tag-checkbox" value="59,117"> MMO / MMORPG</label> <!-- Excludes both 'mmo' (59) and 'mmorpg' (117) tags -->
+                        <label><input type="checkbox" class="exclude-tag-checkbox" value="113"> Free-to-play</label> <!-- ID for 'Free to Play' -->
                     </div>
-                </div>
-                <div class="filter-group">
-                    <label>Library:</label>
-                    <button id="library-toggle-btn" class="toggle-btn" data-toggled="false">Author Owned Games</button>
                 </div>
             </div>
         </div>
@@ -116,8 +110,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Your script.js MUST load AFTER the Supabase CDN script -->
+	
     <script src="script.js"></script>
 
 	<div id="report-modal-overlay" class="modal-overlay">
@@ -125,9 +118,6 @@
         <div id="modal-content" class="modal-content">
             <span id="close-report-modal-btn" class="close-button">&times;</span>
             <div id="report-modal-body">
-                <!-- MODIFIED: Temporarily remove 'sandbox' to test if it's the blocking factor.
-                     If it works without sandbox, you can re-add it with specific permissions.
-                     Also, added referrerpolicy for better privacy control. -->
                 <iframe 
                     width="100%" 
                     height="100%" 
