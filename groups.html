@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Game Picks — Group-ready Board</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
 <style>
   :root{
     --bg:#0f1724; --card:#0b1220; --muted:#9aa6b2; --accent:#4f46e5;
@@ -15,6 +16,12 @@
   .wrap{max-width:1200px; margin:28px auto; padding:18px;}
   header{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
   h1{margin:0;font-size:20px;letter-spacing:-0.2px}
+  .back-btn {
+    background: rgba(255,255,255,0.05); color: var(--muted); text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 10px;
+    cursor: pointer; font-weight: 600; transition: background-color 0.2s;
+  }
+  .back-btn:hover { background: rgba(255,255,255,0.1); }
   .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
   button, .small-btn {background:var(--accent); color:white; border:0; padding:8px 12px; border-radius:10px; cursor:pointer;}
   .small-btn{padding:6px 10px;font-size:13px}
@@ -47,10 +54,10 @@
 <body>
 <div class="wrap">
   <header>
+    <a href="index.html" class="back-btn">← Back to Main</a>
     <h1>Group-ready Game Board</h1>
     <div class="controls">
       <div class="pill" id="stats">Games: 0 — Total players: 0</div>
-      <button class="small-btn" id="fetchImages">Fetch Images</button>
       <button class="small-btn" id="importBtn">Import CSV</button>
       <button class="small-btn" id="exportBtn">Export CSV</button>
       <button class="small-btn" id="clearBtn" title="Reset stored players (local only)">Reset</button>
@@ -68,7 +75,7 @@
 
   <footer>
     <div>Usage: Click <strong>Join</strong> on a game card and type your name. Names are saved in your browser and can be exported/imported as CSV.</div>
-    <div style="margin-top:8px;color:var(--muted)">Note: Cover images are fetched using the RAWG API. If an image is missing, it may not be available on RAWG.</div>
+    <div style="margin-top:8px;color:var(--muted)">Note: Cover images are fetched automatically in the background using the RAWG API.</div>
   </footer>
 </div>
 
@@ -77,9 +84,8 @@
 <script>
 /*
   Game Board - Optimized
-  - API key is now read from localStorage, set by the main page.
+  - Images are fetched automatically and concurrently on page load.
   - Player removal is only available in admin mode (URL?admin=true).
-  - "Join" UI has been improved for better usability.
 */
 
 const initialGames = [
@@ -95,7 +101,7 @@ const initialGames = [
 ];
 
 const STORAGE_KEY = 'gameBoardData_v1';
-const API_KEY_STORAGE = 'chooseOurGameApiKey'; // Key used by the main script to store the API key
+const API_KEY_STORAGE = 'chooseOurGameApiKey';
 
 let data = loadData();
 renderBoard();
@@ -133,8 +139,9 @@ function updateStats(){
 
 function renderBoard(filter=''){
   const board = document.getElementById('board');
+  const currentFilter = filter.toLowerCase();
   board.innerHTML = '';
-  const list = data.filter(g => g.name.toLowerCase().includes(filter.toLowerCase()));
+  const list = data.filter(g => g.name.toLowerCase().includes(currentFilter));
   
   list.forEach((game, idx) => {
     const card = document.createElement('div');
@@ -170,9 +177,10 @@ function renderBoard(filter=''){
     playersDiv.className = 'players';
     if(game.players && game.players.length){
       game.players.forEach((p,pi)=>{
+        const gameIndexInData = data.findIndex(d => d.name === game.name); // Find original index
         const pill = document.createElement('span');
         pill.className='player';
-        pill.innerHTML = `<span>${escapeHtml(p)}</span>${isAdmin() ? `<button title="remove" data-game-idx="${idx}" data-player-idx="${pi}">×</button>` : ''}`;
+        pill.innerHTML = `<span>${escapeHtml(p)}</span>${isAdmin() ? `<button title="remove" data-game-idx="${gameIndexInData}" data-player-idx="${pi}">×</button>` : ''}`;
         playersDiv.appendChild(pill);
       });
     } else {
@@ -185,7 +193,10 @@ function renderBoard(filter=''){
     const joinBtn = document.createElement('button');
     joinBtn.className = 'join';
     joinBtn.textContent = 'Join';
-    joinBtn.addEventListener('click', (e) => openJoinInline(idx, e.currentTarget));
+    joinBtn.addEventListener('click', (e) => {
+        const gameIndexInData = data.findIndex(d => d.name === game.name);
+        openJoinInline(gameIndexInData, e.currentTarget)
+    });
     actions.appendChild(joinBtn);
 
     meta.appendChild(titleRow);
@@ -243,30 +254,20 @@ function openJoinInline(gameIndex, joinBtn){
   buttonRow.className = 'join-form-buttons';
   
   const addBtn = document.createElement('button');
-  addBtn.className = 'small-btn';
-  addBtn.textContent = 'Add';
-
+  addBtn.className = 'small-btn'; addBtn.textContent = 'Add';
   const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'small-btn';
-  cancelBtn.textContent = 'Cancel';
-  cancelBtn.name = 'cancel';
+  cancelBtn.className = 'small-btn'; cancelBtn.textContent = 'Cancel'; cancelBtn.name = 'cancel';
   
-  buttonRow.appendChild(addBtn);
-  buttonRow.appendChild(cancelBtn);
+  buttonRow.appendChild(addBtn); buttonRow.appendChild(cancelBtn);
 
   const input = document.createElement('input');
-  input.type = 'text';
-  input.placeholder = 'Type your name and press Enter';
+  input.type = 'text'; input.placeholder = 'Type your name and press Enter';
 
-  formWrapper.appendChild(buttonRow);
-  formWrapper.appendChild(input);
+  formWrapper.appendChild(buttonRow); formWrapper.appendChild(input);
   actionsContainer.appendChild(formWrapper);
   input.focus();
 
-  const close = () => {
-    formWrapper.remove();
-    joinBtn.style.display = 'block';
-  };
+  const close = () => { formWrapper.remove(); joinBtn.style.display = 'block'; };
 
   addBtn.addEventListener('click', () => {
     const name = input.value.trim();
@@ -276,7 +277,6 @@ function openJoinInline(gameIndex, joinBtn){
   });
 
   cancelBtn.addEventListener('click', close);
-
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') addBtn.click();
     if (e.key === 'Escape') close();
@@ -292,9 +292,9 @@ function addPlayer(gameIndex, name){
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
+// --- Event Listeners ---
 document.getElementById('filterInput').addEventListener('input', (e)=> renderBoard(e.target.value));
 document.getElementById('clearFilter').addEventListener('click', ()=> {document.getElementById('filterInput').value=''; renderBoard('')});
-
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   const rows = [['name','votes','players','img']];
   data.forEach(g=>{
@@ -307,19 +307,21 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   a.href = url; a.download = 'games-board.csv'; a.click();
   URL.revokeObjectURL(url);
 });
-
 document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('fileInput').click());
 document.getElementById('fileInput').addEventListener('change', e=>{
   const f = e.target.files[0]; if(!f) return;
   const reader = new FileReader();
-  reader.onload = ev =>{
-    const txt = ev.target.result;
-    parseCsvImport(txt);
-    document.getElementById('fileInput').value = '';
-  };
+  reader.onload = ev => { parseCsvImport(ev.target.result); document.getElementById('fileInput').value = ''; };
   reader.readAsText(f);
 });
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(!confirm('Reset stored players and images? This clears local changes.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  data = loadData();
+  renderBoard();
+});
 
+// --- CSV and Helper Functions ---
 function parseCsvImport(txt){
   const lines = txt.split(/\r?\n/).filter(Boolean);
   if(lines.length <= 1) return alert('CSV looks empty or only header');
@@ -337,14 +339,8 @@ function parseCsvImport(txt){
         img: (imgIdx>=0 ? cols[imgIdx] : '') || null
     });
   }
-  if(imported.length) {
-    data = imported;
-    saveData();
-    renderBoard();
-    alert('Imported '+imported.length+' rows.');
-  }
+  if(imported.length) { data = imported; saveData(); renderBoard(); alert('Imported '+imported.length+' rows.'); }
 }
-
 function splitCsvLine(line){
   const out=[], cur=''; let inq=false;
   for(let i=0;i<line.length;i++){
@@ -356,7 +352,6 @@ function splitCsvLine(line){
   out.push(cur);
   return out.map(s => s.trim());
 }
-
 function escapeCsv(v){
   if(v == null) return '';
   const s = String(v);
@@ -364,55 +359,53 @@ function escapeCsv(v){
   return s;
 }
 
-document.getElementById('clearBtn').addEventListener('click', ()=>{
-  if(!confirm('Reset stored players and images? This clears local changes.')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  data = loadData();
-  renderBoard();
-});
+// --- AUTOMATIC IMAGE FETCHER ---
+async function fetchAllImagesConcurrently(key) {
+    const gamesToFetch = data.filter(g => !g.img);
+    if (gamesToFetch.length === 0) return;
 
-document.getElementById('fetchImages').addEventListener('click', async () => {
-    const key = localStorage.getItem(API_KEY_STORAGE);
-    if (!key) {
-        alert('RAWG API Key not found. Please ensure you have visited the main page first.');
-        return;
-    }
-    const btn = document.getElementById('fetchImages');
-    btn.textContent = 'Fetching...';
-    btn.disabled = true;
-    await fetchImagesFromRAWG(key);
-    btn.textContent = 'Fetch Images';
-    btn.disabled = false;
-});
+    const promises = gamesToFetch.map(game => {
+        const q = encodeURIComponent(game.name);
+        const url = `https://api.rawg.io/api/games?search=${q}&key=${key}`;
+        return fetch(url)
+            .then(resp => resp.ok ? resp.json() : Promise.reject(`API error for ${game.name}`))
+            .then(json => ({
+                gameName: game.name,
+                imageUrl: json.results?.[0]?.background_image || null
+            }))
+            .catch(err => {
+                console.warn(err);
+                return { gameName: game.name, imageUrl: null }; // Ensure object structure on error
+            });
+    });
 
-async function fetchImagesFromRAWG(key){
-  for(let i=0; i<data.length; i++){
-    if (data[i].img) continue; // Skip if image already exists
-    try {
-      const g = data[i];
-      const q = encodeURIComponent(g.name);
-      const url = `https://api.rawg.io/api/games?search=${q}&key=${key}`;
-      const resp = await fetch(url);
-      if(!resp.ok) { console.warn('RAWG fetch failed for', g.name, resp.status); continue; }
-      const json = await resp.json();
-      if(json && json.results && json.results.length){
-        const first = json.results[0];
-        if(first.background_image){
-          data[i].img = first.background_image;
-          await sleep(150); // Be friendly to the API
+    const results = await Promise.all(promises);
+    
+    let imagesFound = false;
+    for (const result of results) {
+        if (result.imageUrl) {
+            const gameToUpdate = data.find(g => g.name === result.gameName);
+            if (gameToUpdate) {
+                gameToUpdate.img = result.imageUrl;
+                imagesFound = true;
+            }
         }
-      }
-    } catch(err) { console.warn('RAWG error', err); }
-  }
-  saveData();
-  renderBoard(document.getElementById('filterInput').value || '');
-  alert('Image fetch attempt finished.');
+    }
+
+    if (imagesFound) {
+        saveData();
+        renderBoard(document.getElementById('filterInput').value || '');
+    }
 }
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-// ---------- on load ----------
-updateStats();
+// ---------- ON PAGE LOAD ----------
+(async () => {
+    updateStats();
+    const apiKey = localStorage.getItem(API_KEY_STORAGE);
+    if (apiKey) {
+        fetchAllImagesConcurrently(apiKey); // No need to wait for it
+    }
+})();
 </script>
 </body>
 </html>
