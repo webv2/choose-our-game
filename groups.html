@@ -56,7 +56,6 @@
     <h1>Group-ready Game Board</h1>
     <div class="controls">
       <div class="pill" id="stats">Loading...</div>
-      <button class="small-btn" id="clearBtn" title="Reset all players and images from the database">Reset Board</button>
     </div>
   </header>
 
@@ -76,10 +75,7 @@
 
 <script>
 /*
-  Game Board - Supabase Real-time Version
-  - All data is stored and fetched from a Supabase 'game_groups' table.
-  - Player changes are pushed to the DB and reflected for all users instantly.
-  - CSV/Import/Export and Admin functionality has been removed.
+  Game Board - Supabase Real-time Version (Corrected)
 */
 
 // --- CONFIGURATION ---
@@ -88,15 +84,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const API_KEY_STORAGE = 'chooseOurGameApiKey';
 
 // --- INITIALIZATION ---
-// NOTE: The 'supabase' object is globally available from the Supabase CDN script loaded in the <head>.
-// We destructure it to create our client instance.
 const { createClient } = supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Local state for the game data
 let gameData = [];
 
-// Initial list of games to seed the database if it's empty
 const initialGames = [
   {game_name:"Valheim", votes:5}, {game_name:"No Man's Sky", votes:4}, {game_name:"Grand Theft Auto V", votes:4}, {game_name:"Satisfactory", votes:3},
   {game_name:"7 Days to Die", votes:3}, {game_name:"Tom Clancy's The Division 2", votes:3}, {game_name:"Cuphead", votes:3}, {game_name:"Among Us", votes:3},
@@ -185,33 +177,47 @@ function renderBoard(filter = ''){
 async function addPlayer(gameName, playerName) {
     const game = gameData.find(g => g.game_name === gameName);
     if (!game) return;
-    const newPlayers = [...game.players, playerName];
-    
+
+    // --- Optimistic UI Update ---
+    game.players.push(playerName);
+    renderBoard(document.getElementById('filterInput').value || '');
+
+    // --- Sync with Database ---
     const { error } = await supabaseClient
         .from('game_groups')
-        .update({ players: newPlayers })
+        .update({ players: game.players })
         .eq('game_name', gameName);
     
     if (error) {
         console.error("Error adding player:", error);
-        alert("Failed to save your name. Check the console for details.");
+        // Optional: Revert UI change on error
+        game.players.pop();
+        renderBoard(document.getElementById('filterInput').value || '');
+        alert("Failed to save your name. Please try again.");
     }
 }
 
 async function removePlayer(gameName, playerIndex) {
     const game = gameData.find(g => g.game_name === gameName);
     if (!game) return;
-    const newPlayers = [...game.players];
-    newPlayers.splice(playerIndex, 1);
+    const removedPlayer = game.players[playerIndex];
 
+    // --- Optimistic UI Update ---
+    game.players.splice(playerIndex, 1);
+    renderBoard(document.getElementById('filterInput').value || '');
+
+    // --- Sync with Database ---
     const { error } = await supabaseClient
         .from('game_groups')
-        .update({ players: newPlayers })
+        .update({ players: game.players })
         .eq('game_name', gameName);
 
     if (error) {
         console.error("Error removing player:", error);
-        alert("Failed to remove the player. Check the console for details.");
+        // Optional: Revert UI change on error
+        game.players.splice(playerIndex, 0, removedPlayer);
+        renderBoard(document.getElementById('filterInput').value || '');
+        alert("Failed to remove the player. Please try again.");
     }
 }
 
@@ -328,7 +334,8 @@ async function initializeBoard() {
     supabaseClient.channel('game_groups_changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'game_groups' }, payload => {
             const record = payload.new;
-            const index = gameData.findIndex(g => g.game_name === (record.game_name || payload.old.game_name));
+            const key = record.game_name || payload.old.game_name;
+            const index = gameData.findIndex(g => g.game_name === key);
 
             if (payload.eventType === 'DELETE') {
                  if (index !== -1) gameData.splice(index, 1);
@@ -356,22 +363,6 @@ document.getElementById('board').addEventListener('click', e => {
         const playerIndex = parseInt(btn.dataset.playerIdx, 10);
         removePlayer(gameName, playerIndex);
     }
-});
-
-document.getElementById('clearBtn').addEventListener('click', async ()=>{
-  if(!confirm('Are you sure you want to reset the entire board? This will remove ALL players and fetched images from the database.')) return;
-  
-  const updates = gameData.map(game => ({
-      game_name: game.game_name,
-      players: [],
-      img: null
-  }));
-  
-  const { error } = await supabaseClient.from('game_groups').upsert(updates);
-  if (error) {
-      console.error("Error resetting board:", error);
-      alert('Failed to reset the board.');
-  }
 });
 
 // --- START THE APP ---
