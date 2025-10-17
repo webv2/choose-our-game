@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
     const RAWG_API_KEY = '194e7b3728b04675acb4abd1ffb834f0';
+    localStorage.setItem('chooseOurGameApiKey', RAWG_API_KEY);
     const RAWG_BASE_URL = 'https://api.rawg.io/api';
 
     // --- PASTE YOUR SUPABASE CREDENTIALS HERE ---
@@ -566,3 +567,4 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchGenres(); // This will then call loadState and applyFilters
     })();
 });
+
