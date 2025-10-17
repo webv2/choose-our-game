@@ -35,7 +35,6 @@
   .votes{background:var(--glass); padding:6px 8px; border-radius:999px; font-size:13px; color:var(--muted)}
   .players{margin-top:10px; font-size:13px; color:var(--muted); min-height:34px;}
   .player{display:inline-flex; background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:999px; margin:4px 6px 0 0; align-items:center; gap:8px;}
-  /* Removed button style from player pill as it's no longer needed */
   .actions{display:flex; gap:8px; margin-top:12px}
   .join{flex:1; background:transparent; border:1px dashed rgba(255,255,255,0.06); padding:8px;border-radius:10px;color:var(--muted); cursor:pointer}
   .join-form { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
@@ -53,7 +52,7 @@
 <div class="wrap">
   <header>
     <a href="index.html" class="back-btn">← Back to Main</a>
-    <h1>Group-ready Game Board</h1>
+    <h1>Choose Our Game — Assemble Groups</h1>
     <div class="controls">
       <div class="pill" id="stats">Loading...</div>
     </div>
@@ -75,67 +74,4 @@
 
 <script>
 /*
-  Game Board - Supabase Real-time Version (Final)
-  - Player deletion from the UI has been removed.
-  - Deletions must be managed directly in the Supabase database.
-*/
-
-// --- CONFIGURATION ---
-const SUPABASE_URL = 'https://lgtajqxzcgutovcqwepe.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGFqcXh6Y2d1dG92Y3F3ZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDg3NjIsImV4cCI6MjA3NTc4NDc2Mn0.QKnnpZ4fHrgpSeCeyJ2qVOJUqafd3jxRF4j5uMenMbg';
-const API_KEY_STORAGE = 'chooseOurGameApiKey';
-
-// --- INITIALIZATION ---
-const { createClient } = supabase;
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-let gameData = [];
-
-const initialGames = [
-  {game_name:"Valheim", votes:5}, {game_name:"No Man's Sky", votes:4}, {game_name:"Grand Theft Auto V", votes:4}, {game_name:"Satisfactory", votes:3},
-  {game_name:"7 Days to Die", votes:3}, {game_name:"Tom Clancy's The Division 2", votes:3}, {game_name:"Cuphead", votes:3}, {game_name:"Among Us", votes:3},
-  {game_name:"Mortal Kombat 11", votes:3}, {game_name:"Phasmophobia", votes:3}, {game_name:"Portal 2", votes:3}, {game_name:"Dying Light: The Following - Enhanced Edition", votes:2},
-  {game_name:"Path of Exile", votes:2}, {game_name:"Tom Clancy's Ghost Recon Wildlands", votes:2}, {game_name:"Fallout 76", votes:2}, {game_name:"Rocket League", votes:2},
-  {game_name:"Mortal Kombat X", votes:2}, {game_name:"Need for Speed", votes:2}, {game_name:"Remnant: From the Ashes", votes:2}, {game_name:"Worms Armageddon", votes:2},
-  {game_name:"Dead Island Definitive Edition", votes:2}, {game_name:"Quake III Arena", votes:2}, {game_name:"Diablo III", votes:2}, {game_name:"Dead Island: Riptide Definitive Edition", votes:2},
-  {game_name:"Rise of Nations: Extended Edition", votes:2}, {game_name:"Counter-Strike: Global Offensive", votes:2}, {game_name:"PAYDAY 2", votes:2},
-  {game_name:"Tomb Raider (2013)", votes:2}, {game_name:"Red Dead Redemption 2", votes:2}, {game_name:"Batman: Arkham Knight", votes:2},
-  {game_name:"Borderlands 2", votes:2}, {game_name:"Terraria", votes:2}
-];
-
-// --- CORE FUNCTIONS ---
-
-function updateStats(){
-  const games = gameData.length;
-  const totalPlayers = gameData.reduce((sum, game) => sum + (game.players ? game.players.length : 0), 0);
-  document.getElementById('stats').textContent = `Games: ${games} — Total players: ${totalPlayers}`;
-}
-
-function renderBoard(filter = ''){
-  const board = document.getElementById('board');
-  const currentFilter = filter.toLowerCase();
-  board.innerHTML = '';
-  const list = gameData.filter(g => g.game_name.toLowerCase().includes(currentFilter));
-  
-  list.forEach(game => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    
-    const cover = document.createElement('div');
-    cover.className = 'cover';
-    if(game.img){
-      const img = document.createElement('img');
-      img.src = game.img; img.alt = game.game_name;
-      img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover';
-      img.onerror = ()=> { cover.innerHTML = fallbackCoverHTML(game); };
-      cover.appendChild(img);
-    } else {
-      cover.innerHTML = fallbackCoverHTML(game);
-    }
-    
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    
-    const titleRow = document.createElement('div');
-    titleRow.className = 'title-row';
-    const titl
+  Game Bo
