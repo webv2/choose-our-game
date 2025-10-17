@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Choose Our Game — Assemble Groups</title>
+<title>Game Picks — Group-ready Board</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.min.js"></script>
 <style>
@@ -82,13 +82,16 @@
   - CSV/Import/Export and Admin functionality has been removed.
 */
 
-// --- PASTE YOUR SUPABASE CREDENTIALS HERE (from your other script.js file) ---
+// --- CONFIGURATION ---
 const SUPABASE_URL = 'https://lgtajqxzcgutovcqwepe.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGFqcXh6Y2d1dG92Y3F3ZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDg3NjIsImV4cCI6MjA3NTc4NDc2Mn0.QKnnpZ4fHrgpSeCeyJ2qVOJUqafd3jxRF4j5uMenMbg';
-const API_KEY_STORAGE = 'chooseOurGameApiKey'; // Key for RAWG API from main page
+const API_KEY_STORAGE = 'chooseOurGameApiKey';
 
-// Initialize Supabase Client
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// --- INITIALIZATION ---
+// NOTE: The 'supabase' object is globally available from the Supabase CDN script loaded in the <head>.
+// We destructure it to create our client instance.
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Local state for the game data
 let gameData = [];
@@ -124,7 +127,6 @@ function renderBoard(filter = ''){
     const card = document.createElement('div');
     card.className = 'card';
     
-    // Cover Image
     const cover = document.createElement('div');
     cover.className = 'cover';
     if(game.img){
@@ -137,7 +139,6 @@ function renderBoard(filter = ''){
       cover.innerHTML = fallbackCoverHTML(game);
     }
     
-    // Meta Info
     const meta = document.createElement('div');
     meta.className = 'meta';
     
@@ -149,7 +150,6 @@ function renderBoard(filter = ''){
     votes.className = 'votes'; votes.textContent = `${game.votes} votes`;
     titleRow.appendChild(title); titleRow.appendChild(votes);
     
-    // Players List
     const playersDiv = document.createElement('div');
     playersDiv.className = 'players';
     if(game.players && game.players.length){
@@ -163,7 +163,6 @@ function renderBoard(filter = ''){
       playersDiv.innerHTML = `<div style="color:var(--muted)">No players yet</div>`;
     }
     
-    // Actions
     const actions = document.createElement('div');
     actions.className = 'actions';
     const joinBtn = document.createElement('button');
@@ -188,7 +187,7 @@ async function addPlayer(gameName, playerName) {
     if (!game) return;
     const newPlayers = [...game.players, playerName];
     
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('game_groups')
         .update({ players: newPlayers })
         .eq('game_name', gameName);
@@ -205,7 +204,7 @@ async function removePlayer(gameName, playerIndex) {
     const newPlayers = [...game.players];
     newPlayers.splice(playerIndex, 1);
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('game_groups')
         .update({ players: newPlayers })
         .eq('game_name', gameName);
@@ -299,7 +298,7 @@ async function fetchAllImagesConcurrently(key) {
 
     const validUpdates = updates.filter(Boolean);
     if (validUpdates.length > 0) {
-        const { error } = await supabase.from('game_groups').upsert(validUpdates);
+        const { error } = await supabaseClient.from('game_groups').upsert(validUpdates);
         if (error) console.error("Error saving fetched images:", error);
     }
 }
@@ -307,17 +306,17 @@ async function fetchAllImagesConcurrently(key) {
 // --- INITIALIZATION AND REAL-TIME SUBSCRIPTION ---
 
 async function initializeBoard() {
-    const { data, error } = await supabase.from('game_groups').select('*');
+    const { data, error } = await supabaseClient.from('game_groups').select('*');
     
     if (error) { console.error('Error fetching data:', error); return; }
 
     if (data.length === 0) {
         console.log('Database is empty, seeding with initial games...');
-        const { error: insertError } = await supabase.from('game_groups').insert(initialGames);
+        const { error: insertError } = await supabaseClient.from('game_groups').insert(initialGames);
         if (insertError) {
             console.error('Error seeding database:', insertError);
         } else {
-            const { data: newData } = await supabase.from('game_groups').select('*');
+            const { data: newData } = await supabaseClient.from('game_groups').select('*');
             gameData = newData || [];
         }
     } else {
@@ -326,10 +325,11 @@ async function initializeBoard() {
 
     renderBoard();
 
-    supabase.channel('game_groups_changes')
+    supabaseClient.channel('game_groups_changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'game_groups' }, payload => {
             const record = payload.new;
-            const index = gameData.findIndex(g => g.game_name === record.game_name);
+            const index = gameData.findIndex(g => g.game_name === (record.game_name || payload.old.game_name));
+
             if (payload.eventType === 'DELETE') {
                  if (index !== -1) gameData.splice(index, 1);
             } else {
@@ -367,7 +367,7 @@ document.getElementById('clearBtn').addEventListener('click', async ()=>{
       img: null
   }));
   
-  const { error } = await supabase.from('game_groups').upsert(updates);
+  const { error } = await supabaseClient.from('game_groups').upsert(updates);
   if (error) {
       console.error("Error resetting board:", error);
       alert('Failed to reset the board.');
