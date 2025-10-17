@@ -60,18 +60,284 @@
 
   <div class="toolbar">
     <div class="search-row">
-      <input type="text" id="filterInput" placeholder="Filter games by name..." style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit;width:320px" />
+      <input type="text" id="filterInput" placeholder="Filter games by name..." />
       <button class="small-btn" id="clearFilter">Clear</button>
     </div>
   </div>
 
   <div class="board" id="board"></div>
 
-  <footer>
+  <footer id="footer">
     <div>Usage: Click <strong>Join</strong> on a game card and type your name. Changes are saved to the database and are visible to everyone in real-time.</div>
   </footer>
 </div>
 
 <script>
 /*
-  Game Bo
+  Game Board - Supabase Real-time Version (Corrected Initialization)
+*/
+
+// --- CONFIGURATION (Corrected Key) ---
+const SUPABASE_URL = 'https://lgtajqxzcgutovcqwepe.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndGFqcXh6Y2d1dG92Y3F3ZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDg3NjIsImV4cCI6MjA3NTc4NDc2Mn0.QKnnpZ4fHrgpSeCeyJ2qVOJUqafd3jxRF4j5uMenMbg';
+const API_KEY_STORAGE = 'chooseOurGameApiKey';
+
+// --- INITIALIZATION ---
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let gameData = [];
+
+const initialGames = [
+  {game_name:"Valheim", votes:5}, {game_name:"No Man's Sky", votes:4}, {game_name:"Grand Theft Auto V", votes:4}, {game_name:"Satisfactory", votes:3},
+  {game_name:"7 Days to Die", votes:3}, {game_name:"Tom Clancy's The Division 2", votes:3}, {game_name:"Cuphead", votes:3}, {game_name:"Among Us", votes:3},
+  {game_name:"Mortal Kombat 11", votes:3}, {game_name:"Phasmophobia", votes:3}, {game_name:"Portal 2", votes:3}, {game_name:"Dying Light: The Following - Enhanced Edition", votes:2},
+  {game_name:"Path of Exile", votes:2}, {game_name:"Tom Clancy's Ghost Recon Wildlands", votes:2}, {game_name:"Fallout 76", votes:2}, {game_name:"Rocket League", votes:2},
+  {game_name:"Mortal Kombat X", votes:2}, {game_name:"Need for Speed", votes:2}, {game_name:"Remnant: From the Ashes", votes:2}, {game_name:"Worms Armageddon", votes:2},
+  {game_name:"Dead Island Definitive Edition", votes:2}, {game_name:"Quake III Arena", votes:2}, {game_name:"Diablo III", votes:2}, {game_name:"Dead Island: Riptide Definitive Edition", votes:2},
+  {game_name:"Rise of Nations: Extended Edition", votes:2}, {game_name:"Counter-Strike: Global Offensive", votes:2}, {game_name:"PAYDAY 2", votes:2},
+  {game_name:"Tomb Raider (2013)", votes:2}, {game_name:"Red Dead Redemption 2", votes:2}, {game_name:"Batman: Arkham Knight", votes:2},
+  {game_name:"Borderlands 2", votes:2}, {game_name:"Terraria", votes:2}
+];
+
+// --- CORE FUNCTIONS ---
+
+function updateStats(){
+  const games = gameData.length;
+  const totalPlayers = gameData.reduce((sum, game) => sum + (game.players ? game.players.length : 0), 0);
+  document.getElementById('stats').textContent = `Games: ${games} — Total players: ${totalPlayers}`;
+}
+
+function renderBoard(filter = ''){
+  const board = document.getElementById('board');
+  const currentFilter = filter.toLowerCase();
+  board.innerHTML = '';
+  const list = gameData.filter(g => g.game_name.toLowerCase().includes(currentFilter));
+  
+  list.forEach(game => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    
+    const cover = document.createElement('div');
+    cover.className = 'cover';
+    if(game.img){
+      const img = document.createElement('img');
+      img.src = game.img; img.alt = game.game_name;
+      img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover';
+      img.onerror = ()=> { cover.innerHTML = fallbackCoverHTML(game); };
+      cover.appendChild(img);
+    } else {
+      cover.innerHTML = fallbackCoverHTML(game);
+    }
+    
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    
+    const titleRow = document.createElement('div');
+    titleRow.className = 'title-row';
+    const title = document.createElement('div');
+    title.className = 'title'; title.textContent = game.game_name;
+    const votes = document.createElement('div');
+    votes.className = 'votes'; votes.textContent = `${game.votes} votes`;
+    titleRow.appendChild(title); titleRow.appendChild(votes);
+    
+    const playersDiv = document.createElement('div');
+    playersDiv.className = 'players';
+    if(game.players && game.players.length){
+      game.players.forEach((player)=>{
+        const pill = document.createElement('span');
+        pill.className='player';
+        pill.innerHTML = `<span>${escapeHtml(player)}</span>`;
+        playersDiv.appendChild(pill);
+      });
+    } else {
+      playersDiv.innerHTML = `<div style="color:var(--muted)">No players yet</div>`;
+    }
+    
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const joinBtn = document.createElement('button');
+    joinBtn.className = 'join';
+    joinBtn.textContent = 'Join';
+    joinBtn.addEventListener('click', (e) => openJoinInline(game.game_name, e.currentTarget));
+    actions.appendChild(joinBtn);
+
+    meta.appendChild(titleRow);
+    meta.appendChild(playersDiv);
+    meta.appendChild(actions);
+
+    card.appendChild(cover);
+    card.appendChild(meta);
+    board.appendChild(card);
+  });
+  updateStats();
+}
+
+async function addPlayer(gameName, playerName) {
+    const game = gameData.find(g => g.game_name === gameName);
+    if (!game) return;
+
+    game.players.push(playerName);
+    renderBoard(document.getElementById('filterInput').value || '');
+
+    const { error } = await supabaseClient
+        .from('game_groups')
+        .update({ players: game.players })
+        .eq('game_name', gameName);
+    
+    if (error) {
+        console.error("Error adding player:", error);
+        game.players.pop();
+        renderBoard(document.getElementById('filterInput').value || '');
+        alert("Failed to save your name. Please try again.");
+    }
+}
+
+// --- UI AND HELPER FUNCTIONS ---
+
+function openJoinInline(gameName, joinBtn){
+  if (document.querySelector('.join-form')) {
+    document.querySelector('.join-form button[name="cancel"]').click();
+  }
+
+  const actionsContainer = joinBtn.parentElement;
+  joinBtn.style.display = 'none';
+
+  const formWrapper = document.createElement('div');
+  formWrapper.className = 'join-form';
+
+  const buttonRow = document.createElement('div');
+  buttonRow.className = 'join-form-buttons';
+  
+  const addBtn = document.createElement('button');
+  addBtn.className = 'small-btn'; addBtn.textContent = 'Add';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'small-btn'; cancelBtn.textContent = 'Cancel'; cancelBtn.name = 'cancel';
+  
+  buttonRow.appendChild(addBtn); buttonRow.appendChild(cancelBtn);
+
+  const input = document.createElement('input');
+  input.type = 'text'; input.placeholder = 'Type your name and press Enter';
+
+  formWrapper.appendChild(buttonRow);
+  formWrapper.appendChild(input);
+  actionsContainer.appendChild(formWrapper);
+  input.focus();
+
+  const close = () => { formWrapper.remove(); joinBtn.style.display = 'block'; };
+
+  addBtn.addEventListener('click', async () => {
+    const name = input.value.trim();
+    if(!name) return;
+    await addPlayer(gameName, name);
+    close();
+  });
+
+  cancelBtn.addEventListener('click', close);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addBtn.click();
+    if (e.key === 'Escape') close();
+  });
+}
+
+function fallbackCoverHTML(game){
+  const initials = game.game_name.split(' ').slice(0,2).map(s=>s[0]).join('').substring(0,2).toUpperCase();
+  const colorSeed = hashCode(game.game_name);
+  const hue = Math.abs(colorSeed) % 360;
+  return `<div class="img-fallback" style="background:linear-gradient(135deg,hsl(${hue} 60% 30%), hsl(${(hue+60)%360} 60% 40%));">${initials}</div>`;
+}
+
+function hashCode(str){
+  let h=0;
+  for(let i=0;i<str.length;i++) h = ((h<<5)-h)+str.charCodeAt(i)|0;
+  return h;
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+// --- AUTOMATIC IMAGE FETCHER ---
+async function fetchAllImagesConcurrently(key) {
+    const gamesToFetch = gameData.filter(g => !g.img);
+    if (gamesToFetch.length === 0) return;
+
+    const updates = await Promise.all(gamesToFetch.map(async (game) => {
+        try {
+            const q = encodeURIComponent(game.game_name);
+            const url = `https://api.rawg.io/api/games?search=${q}&key=${key}`;
+            const resp = await fetch(url);
+            const json = await resp.json();
+            const imageUrl = json.results?.[0]?.background_image || null;
+            if (imageUrl) {
+                return { ...game, img: imageUrl };
+            }
+        } catch (err) { console.warn(err); }
+        return null;
+    }));
+
+    const validUpdates = updates.filter(Boolean);
+    if (validUpdates.length > 0) {
+        const { error } = await supabaseClient.from('game_groups').upsert(validUpdates);
+        if (error) console.error("Error saving fetched images:", error);
+    }
+}
+
+// --- INITIALIZATION AND REAL-TIME SUBSCRIPTION ---
+
+async function initializeBoard() {
+    try {
+        const { data, error } = await supabaseClient.from('game_groups').select('*');
+        
+        if (error) throw error;
+
+        if (data.length === 0) {
+            console.log('Database is empty, seeding with initial games...');
+            const { error: insertError } = await supabaseClient.from('game_groups').insert(initialGames);
+            if (insertError) throw insertError;
+            
+            const { data: newData } = await supabaseClient.from('game_groups').select('*');
+            gameData = newData || [];
+        } else {
+            gameData = data;
+        }
+
+        renderBoard();
+
+        supabaseClient.channel('game_groups_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'game_groups' }, payload => {
+                const record = payload.new || {};
+                const key = record.game_name || (payload.old && payload.old.game_name);
+                if (!key) return;
+                
+                const index = gameData.findIndex(g => g.game_name === key);
+
+                if (payload.eventType === 'DELETE') {
+                    if (index !== -1) gameData.splice(index, 1);
+                } else {
+                    if (index !== -1) { gameData[index] = record; } else { gameData.push(record); }
+                }
+                renderBoard(document.getElementById('filterInput').value || '');
+            })
+            .subscribe();
+
+        const apiKey = localStorage.getItem(API_KEY_STORAGE);
+        if (apiKey) {
+            fetchAllImagesConcurrently(apiKey);
+        }
+    } catch (e) {
+        console.error("Fatal Error Initializing Board:", e);
+        document.getElementById('board').innerHTML = `<p style="color: #ff7b7b; text-align: center;">Failed to load game board. Check the developer console for errors.</p>`;
+        document.getElementById('stats').textContent = "Error";
+    }
+}
+
+// --- EVENT LISTENERS ---
+document.getElementById('filterInput').addEventListener('input', (e)=> renderBoard(e.target.value));
+document.getElementById('clearFilter').addEventListener('click', ()=> {
+    document.getElementById('filterInput').value='';
+    renderBoard('');
+});
+
+// --- START THE APP ---
+initializeBoard();
+</script>
+</body>
+</html>
