@@ -36,10 +36,14 @@
   .players{margin-top:10px; font-size:13px; color:var(--muted); min-height:34px;}
   .player{display:inline-flex; background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:999px; margin:4px 6px 0 0; align-items:center; gap:8px;}
   .actions{display:flex; gap:8px; margin-top:12px}
-  .join{flex:1; background:transparent; border:1px dashed rgba(255,255,255,0.06); padding:8px;border-radius:10px;color:var(--muted); cursor:pointer}
+  .join{flex:1; background:transparent; border:1px dashed rgba(255,255,255,0.06); padding:8px;border-radius:10px;color:var(--muted); cursor:pointer; transition: transform 0.1s ease, filter 0.1s ease;}
   .join-form { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
   .join-form-buttons { display: flex; gap: 6px; }
   .join-form-buttons .small-btn { flex-grow: 1; }
+  .join:active {
+  transform: scale(0.97);
+  filter: brightness(0.9); 
+  }
   input[type="text"]{background:transparent;border:1px solid rgba(255,255,255,0.04); padding:8px;border-radius:8px;color:inherit; outline:none; width:100%; box-sizing: border-box;}
   .toolbar{display:flex; gap:8px; margin-bottom:12px; align-items:center}
   .search-row{display:flex; gap:8px; align-items:center}
