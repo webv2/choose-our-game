@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Game Picks — Group-ready Board</title>
+<title>Choose Our Game — Assemble Groups</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.min.js"></script>
 <style>
@@ -35,7 +35,7 @@
   .votes{background:var(--glass); padding:6px 8px; border-radius:999px; font-size:13px; color:var(--muted)}
   .players{margin-top:10px; font-size:13px; color:var(--muted); min-height:34px;}
   .player{display:inline-flex; background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:999px; margin:4px 6px 0 0; align-items:center; gap:8px;}
-  .player button{background:transparent;border:0;color:#ff7b7b;cursor:pointer;padding:0 4px;font-weight:700}
+  /* Removed button style from player pill as it's no longer needed */
   .actions{display:flex; gap:8px; margin-top:12px}
   .join{flex:1; background:transparent; border:1px dashed rgba(255,255,255,0.06); padding:8px;border-radius:10px;color:var(--muted); cursor:pointer}
   .join-form { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
@@ -75,7 +75,9 @@
 
 <script>
 /*
-  Game Board - Supabase Real-time Version (Corrected)
+  Game Board - Supabase Real-time Version (Final)
+  - Player deletion from the UI has been removed.
+  - Deletions must be managed directly in the Supabase database.
 */
 
 // --- CONFIGURATION ---
@@ -136,237 +138,4 @@ function renderBoard(filter = ''){
     
     const titleRow = document.createElement('div');
     titleRow.className = 'title-row';
-    const title = document.createElement('div');
-    title.className = 'title'; title.textContent = game.game_name;
-    const votes = document.createElement('div');
-    votes.className = 'votes'; votes.textContent = `${game.votes} votes`;
-    titleRow.appendChild(title); titleRow.appendChild(votes);
-    
-    const playersDiv = document.createElement('div');
-    playersDiv.className = 'players';
-    if(game.players && game.players.length){
-      game.players.forEach((player, playerIndex)=>{
-        const pill = document.createElement('span');
-        pill.className='player';
-        pill.innerHTML = `<span>${escapeHtml(player)}</span><button title="remove" data-game-name="${game.game_name}" data-player-idx="${playerIndex}">×</button>`;
-        playersDiv.appendChild(pill);
-      });
-    } else {
-      playersDiv.innerHTML = `<div style="color:var(--muted)">No players yet</div>`;
-    }
-    
-    const actions = document.createElement('div');
-    actions.className = 'actions';
-    const joinBtn = document.createElement('button');
-    joinBtn.className = 'join';
-    joinBtn.textContent = 'Join';
-    joinBtn.addEventListener('click', (e) => openJoinInline(game.game_name, e.currentTarget));
-    actions.appendChild(joinBtn);
-
-    meta.appendChild(titleRow);
-    meta.appendChild(playersDiv);
-    meta.appendChild(actions);
-
-    card.appendChild(cover);
-    card.appendChild(meta);
-    board.appendChild(card);
-  });
-  updateStats();
-}
-
-async function addPlayer(gameName, playerName) {
-    const game = gameData.find(g => g.game_name === gameName);
-    if (!game) return;
-
-    // --- Optimistic UI Update ---
-    game.players.push(playerName);
-    renderBoard(document.getElementById('filterInput').value || '');
-
-    // --- Sync with Database ---
-    const { error } = await supabaseClient
-        .from('game_groups')
-        .update({ players: game.players })
-        .eq('game_name', gameName);
-    
-    if (error) {
-        console.error("Error adding player:", error);
-        // Optional: Revert UI change on error
-        game.players.pop();
-        renderBoard(document.getElementById('filterInput').value || '');
-        alert("Failed to save your name. Please try again.");
-    }
-}
-
-async function removePlayer(gameName, playerIndex) {
-    const game = gameData.find(g => g.game_name === gameName);
-    if (!game) return;
-    const removedPlayer = game.players[playerIndex];
-
-    // --- Optimistic UI Update ---
-    game.players.splice(playerIndex, 1);
-    renderBoard(document.getElementById('filterInput').value || '');
-
-    // --- Sync with Database ---
-    const { error } = await supabaseClient
-        .from('game_groups')
-        .update({ players: game.players })
-        .eq('game_name', gameName);
-
-    if (error) {
-        console.error("Error removing player:", error);
-        // Optional: Revert UI change on error
-        game.players.splice(playerIndex, 0, removedPlayer);
-        renderBoard(document.getElementById('filterInput').value || '');
-        alert("Failed to remove the player. Please try again.");
-    }
-}
-
-// --- UI AND HELPER FUNCTIONS ---
-
-function openJoinInline(gameName, joinBtn){
-  if (document.querySelector('.join-form')) {
-    document.querySelector('.join-form button[name="cancel"]').click();
-  }
-
-  const actionsContainer = joinBtn.parentElement;
-  joinBtn.style.display = 'none';
-
-  const formWrapper = document.createElement('div');
-  formWrapper.className = 'join-form';
-
-  const buttonRow = document.createElement('div');
-  buttonRow.className = 'join-form-buttons';
-  
-  const addBtn = document.createElement('button');
-  addBtn.className = 'small-btn'; addBtn.textContent = 'Add';
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'small-btn'; cancelBtn.textContent = 'Cancel'; cancelBtn.name = 'cancel';
-  
-  buttonRow.appendChild(addBtn); buttonRow.appendChild(cancelBtn);
-
-  const input = document.createElement('input');
-  input.type = 'text'; input.placeholder = 'Type your name and press Enter';
-
-  formWrapper.appendChild(buttonRow);
-  formWrapper.appendChild(input);
-  actionsContainer.appendChild(formWrapper);
-  input.focus();
-
-  const close = () => { formWrapper.remove(); joinBtn.style.display = 'block'; };
-
-  addBtn.addEventListener('click', async () => {
-    const name = input.value.trim();
-    if(!name) return;
-    await addPlayer(gameName, name);
-    close();
-  });
-
-  cancelBtn.addEventListener('click', close);
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') addBtn.click();
-    if (e.key === 'Escape') close();
-  });
-}
-
-function fallbackCoverHTML(game){
-  const initials = game.game_name.split(' ').slice(0,2).map(s=>s[0]).join('').substring(0,2).toUpperCase();
-  const colorSeed = hashCode(game.game_name);
-  const hue = Math.abs(colorSeed) % 360;
-  return `<div class="img-fallback" style="background:linear-gradient(135deg,hsl(${hue} 60% 30%), hsl(${(hue+60)%360} 60% 40%));">${initials}</div>`;
-}
-
-function hashCode(str){
-  let h=0;
-  for(let i=0;i<str.length;i++) h = ((h<<5)-h)+str.charCodeAt(i)|0;
-  return h;
-}
-
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-
-// --- AUTOMATIC IMAGE FETCHER ---
-async function fetchAllImagesConcurrently(key) {
-    const gamesToFetch = gameData.filter(g => !g.img);
-    if (gamesToFetch.length === 0) return;
-
-    const updates = await Promise.all(gamesToFetch.map(async (game) => {
-        try {
-            const q = encodeURIComponent(game.game_name);
-            const url = `https://api.rawg.io/api/games?search=${q}&key=${key}`;
-            const resp = await fetch(url);
-            const json = await resp.json();
-            const imageUrl = json.results?.[0]?.background_image || null;
-            if (imageUrl) {
-                return { ...game, img: imageUrl };
-            }
-        } catch (err) { console.warn(err); }
-        return null;
-    }));
-
-    const validUpdates = updates.filter(Boolean);
-    if (validUpdates.length > 0) {
-        const { error } = await supabaseClient.from('game_groups').upsert(validUpdates);
-        if (error) console.error("Error saving fetched images:", error);
-    }
-}
-
-// --- INITIALIZATION AND REAL-TIME SUBSCRIPTION ---
-
-async function initializeBoard() {
-    const { data, error } = await supabaseClient.from('game_groups').select('*');
-    
-    if (error) { console.error('Error fetching data:', error); return; }
-
-    if (data.length === 0) {
-        console.log('Database is empty, seeding with initial games...');
-        const { error: insertError } = await supabaseClient.from('game_groups').insert(initialGames);
-        if (insertError) {
-            console.error('Error seeding database:', insertError);
-        } else {
-            const { data: newData } = await supabaseClient.from('game_groups').select('*');
-            gameData = newData || [];
-        }
-    } else {
-        gameData = data;
-    }
-
-    renderBoard();
-
-    supabaseClient.channel('game_groups_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'game_groups' }, payload => {
-            const record = payload.new;
-            const key = record.game_name || payload.old.game_name;
-            const index = gameData.findIndex(g => g.game_name === key);
-
-            if (payload.eventType === 'DELETE') {
-                 if (index !== -1) gameData.splice(index, 1);
-            } else {
-                if (index !== -1) { gameData[index] = record; } else { gameData.push(record); }
-            }
-            renderBoard(document.getElementById('filterInput').value || '');
-        })
-        .subscribe();
-
-    const apiKey = localStorage.getItem(API_KEY_STORAGE);
-    if (apiKey) {
-        fetchAllImagesConcurrently(apiKey);
-    }
-}
-
-// --- EVENT LISTENERS ---
-document.getElementById('filterInput').addEventListener('input', (e)=> renderBoard(e.target.value));
-document.getElementById('clearFilter').addEventListener('click', ()=> {document.getElementById('filterInput').value=''; renderBoard('')});
-
-document.getElementById('board').addEventListener('click', e => {
-    if (e.target.matches('.player button')) {
-        const btn = e.target;
-        const gameName = btn.dataset.gameName;
-        const playerIndex = parseInt(btn.dataset.playerIdx, 10);
-        removePlayer(gameName, playerIndex);
-    }
-});
-
-// --- START THE APP ---
-initializeBoard();
-</script>
-</body>
-</html>
+    const titl
