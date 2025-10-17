@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Game Picks — Group-ready Board</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --muted:#9aa6b2; --accent:#4f46e5;
+    --glass: rgba(255,255,255,0.03);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  html,body{height:100%; margin:0; background:
+    linear-gradient(180deg, #071020 0%, #071527 50%, #041018 100%); color:#e6eef6;}
+  .wrap{max-width:1200px; margin:28px auto; padding:18px;}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+  h1{margin:0;font-size:20px;letter-spacing:-0.2px}
+  .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+  button, .small-btn {background:var(--accent); color:white; border:0; padding:8px 12px; border-radius:10px; cursor:pointer;}
+  .small-btn{padding:6px 10px;font-size:13px}
+  .board{display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:14px;}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015)); border-radius:12px; overflow:hidden; box-shadow: 0 6px 18px rgba(2,6,23,0.7); border:1px solid rgba(255,255,255,0.02);}
+  .cover{height:120px; background:#071023; display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:600; font-size:18px;}
+  .meta{padding:10px 12px;}
+  .title-row{display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .title{font-weight:600; font-size:15px; margin-right:8px}
+  .votes{background:var(--glass); padding:6px 8px; border-radius:999px; font-size:13px; color:var(--muted)}
+  .players{margin-top:10px; font-size:13px; color:var(--muted); min-height:34px;}
+  .player{display:inline-flex; background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:999px; margin:4px 6px 0 0; align-items:center; gap:8px;}
+  .player button{background:transparent;border:0;color:#ff7b7b;cursor:pointer;padding:0 4px;font-weight:700}
+  .actions{display:flex; gap:8px; margin-top:12px}
+  .join{flex:1; background:transparent; border:1px dashed rgba(255,255,255,0.06); padding:8px;border-radius:10px;color:var(--muted); cursor:pointer}
+  .inline-input{display:flex; gap:6px; margin-top:8px}
+  input[type="text"]{background:transparent;border:1px solid rgba(255,255,255,0.04); padding:8px;border-radius:8px;color:inherit; outline:none; width:100%}
+  .toolbar{display:flex; gap:8px; margin-bottom:12px; align-items:center}
+  .notice{font-size:13px;color:var(--muted); margin-left:8px}
+  .settings{background:rgba(255,255,255,0.02); padding:10px;border-radius:10px; margin-bottom:12px; display:flex; gap:8px; align-items:center;}
+  footer{margin-top:18px; font-size:13px; color:var(--muted)}
+  .download{background:transparent;border:1px solid rgba(255,255,255,0.03); padding:8px;border-radius:8px;color:var(--muted); cursor:pointer}
+  .search-row{display:flex; gap:8px; align-items:center}
+  .pill{background:rgba(255,255,255,0.02); padding:6px 10px;border-radius:999px; font-size:13px; color:var(--muted)}
+  .img-fallback{width:100%;height:100%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; letter-spacing:0.6px}
+  @media (max-width:520px){
+    .board{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Group-ready Game Board</h1>
+    <div class="controls">
+      <div class="pill" id="stats">Games: 0 — Total players: 0</div>
+      <button class="small-btn" id="importBtn">Import CSV</button>
+      <button class="small-btn" id="exportBtn">Export CSV</button>
+      <button class="small-btn" id="clearBtn" title="Reset stored players (local only)">Reset</button>
+    </div>
+  </header>
+
+  <div class="settings" title="Optional: RAWG API key">
+    <label style="font-size:13px;color:var(--muted)">RAWG API key (optional):</label>
+    <input id="rawgKey" type="text" placeholder="paste rawg.io api key here" style="background:transparent;border:1px solid rgba(255,255,255,0.03);padding:8px;border-radius:8px;color:inherit;width:360px"/>
+    <button class="small-btn" id="fetchImages">Fetch images</button>
+    <div class="notice">If empty, placeholders are used. For RAWG API docs see rawg.io.</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-row">
+      <input type="text" id="filterInput" placeholder="Filter games by name..." style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit;width:320px" />
+      <button class="small-btn" id="clearFilter">Clear</button>
+    </div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <footer>
+    <div>Usage: Click <strong>Join</strong> on a game card and type your name. Names are saved in your browser and can be exported/imported as CSV.</div>
+    <div style="margin-top:8px;color:var(--muted)">Note: To fetch official cover images programmatically you can use RAWG's API (requires key). If you prefer, you can also edit the data array inside the file to add custom image URLs. Rawg: rawg.io.</div>
+  </footer>
+</div>
+
+<input id="fileInput" type="file" accept=".csv" style="display:none" />
+
+<script>
+/*
+  Game Board
+  - Data is kept in localStorage under key 'gameBoardData_v1'
+  - If RAWG key provided and "Fetch images" clicked, it attempts to fetch images for games
+  - Export and import CSV format: game,title,votes,players (players semicolon separated)
+*/
+
+const initialGames = [
+  {name:"Valheim", votes:5},
+  {name:"No Man's Sky", votes:4},
+  {name:"Grand Theft Auto V", votes:4},
+  {name:"Satisfactory", votes:3},
+  {name:"7 Days to Die", votes:3},
+  {name:"Tom Clancy's The Division 2", votes:3},
+  {name:"Cuphead", votes:3},
+  {name:"Among Us", votes:3},
+  {name:"Mortal Kombat 11", votes:3},
+  {name:"Phasmophobia", votes:3},
+  {name:"Portal 2", votes:3},
+  {name:"Dying Light: The Following - Enhanced Edition", votes:2},
+  {name:"Path of Exile", votes:2},
+  {name:"Tom Clancy's Ghost Recon Wildlands", votes:2},
+  {name:"Fallout 76", votes:2},
+  {name:"Rocket League", votes:2},
+  {name:"Mortal Kombat X", votes:2},
+  {name:"Need for Speed", votes:2},
+  {name:"Remnant: From the Ashes", votes:2},
+  {name:"Worms Armageddon", votes:2},
+  {name:"Dead Island Definitive Edition", votes:2},
+  {name:"Quake III Arena", votes:2},
+  {name:"Diablo III", votes:2},
+  {name:"Dead Island: Riptide Definitive Edition", votes:2},
+  {name:"Rise of Nations: Extended Edition", votes:2},
+  {name:"Counter-Strike: Global Offensive", votes:2},
+  {name:"PAYDAY 2", votes:2},
+  {name:"Tomb Raider (2013)", votes:2},
+  {name:"Red Dead Redemption 2", votes:2},
+  {name:"Batman: Arkham Knight", votes:2},
+  {name:"Borderlands 2", votes:2},
+  {name:"Terraria", votes:2}
+];
+
+// Load or initialize
+const STORAGE_KEY = 'gameBoardData_v1';
+let data = loadData();
+renderBoard();
+
+function loadData(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw){
+    // initialize structure with optional image field
+    const d = initialGames.map(g => ({...g, players:[], img:null}));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    return d;
+  }
+  try{
+    return JSON.parse(raw);
+  }catch(e){
+    console.warn('corrupt data, resetting',e);
+    localStorage.removeItem(STORAGE_KEY);
+    return loadData();
+  }
+}
+
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  updateStats();
+}
+
+function updateStats(){
+  const games = data.length;
+  const totalPlayers = data.reduce((s,g)=>s + (g.players?g.players.length:0), 0);
+  document.getElementById('stats').textContent = `Games: ${games} — Total players: ${totalPlayers}`;
+}
+
+// Render functions
+function renderBoard(filter=''){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const list = data.filter(g => g.name.toLowerCase().includes(filter.toLowerCase()));
+  list.forEach((game, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    // cover
+    const cover = document.createElement('div');
+    cover.className = 'cover';
+    if(game.img){
+      const img = document.createElement('img');
+      img.src = game.img;
+      img.alt = game.name;
+      img.style.width='100%';
+      img.style.height='100%';
+      img.style.objectFit='cover';
+      img.onerror = ()=> {
+        cover.innerHTML = fallbackCoverHTML(game);
+      };
+      cover.appendChild(img);
+    } else {
+      cover.innerHTML = fallbackCoverHTML(game);
+    }
+    // meta
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const titleRow = document.createElement('div');
+    titleRow.className = 'title-row';
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = game.name;
+    const votes = document.createElement('div');
+    votes.className = 'votes';
+    votes.textContent = `${game.votes} votes`;
+    titleRow.appendChild(title); titleRow.appendChild(votes);
+    const playersDiv = document.createElement('div');
+    playersDiv.className = 'players';
+    playersDiv.id = 'players-'+idx;
+    if(game.players && game.players.length){
+      game.players.forEach((p,pi)=>{
+        const pill = document.createElement('span');
+        pill.className='player';
+        pill.innerHTML = `<span>${escapeHtml(p)}</span><button title="remove" data-game="${idx}" data-player="${pi}">×</button>`;
+        playersDiv.appendChild(pill);
+      });
+    } else {
+      playersDiv.innerHTML = `<div style="color:var(--muted)">No players yet</div>`;
+    }
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const joinBtn = document.createElement('button');
+    joinBtn.className = 'join';
+    joinBtn.textContent = 'Join';
+    joinBtn.addEventListener('click', ()=>openJoinInline(idx, joinBtn));
+    actions.appendChild(joinBtn);
+
+    meta.appendChild(titleRow);
+    meta.appendChild(playersDiv);
+    meta.appendChild(actions);
+
+    card.appendChild(cover);
+    card.appendChild(meta);
+    board.appendChild(card);
+  });
+  // delegate remove player
+  board.querySelectorAll('.player button').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const g = parseInt(btn.dataset.game,10);
+      const p = parseInt(btn.dataset.player,10);
+      data[g].players.splice(p,1);
+      saveData();
+      renderBoard(document.getElementById('filterInput').value || '');
+    });
+  });
+  updateStats();
+}
+
+function fallbackCoverHTML(game){
+  // simple initials badge with gradient
+  const initials = game.name.split(' ').slice(0,2).map(s=>s[0]).join('').substring(0,2).toUpperCase();
+  const colorSeed = hashCode(game.name);
+  const hue = Math.abs(colorSeed) % 360;
+  return `<div class="img-fallback" style="background:linear-gradient(135deg,hsl(${hue} 60% 30%), hsl(${(hue+60)%360} 60% 40%));">${initials}</div>`;
+}
+
+function hashCode(str){
+  let h=0;
+  for(let i=0;i<str.length;i++) h = ((h<<5)-h)+str.charCodeAt(i)|0;
+  return h;
+}
+
+// Inline join flow
+function openJoinInline(gameIndex, joinBtn){
+  // do not open multiple inputs
+  if(joinBtn._open) return;
+  joinBtn._open = true;
+  const parent = joinBtn.parentElement;
+  const wrapper = document.createElement('div');
+  wrapper.className='inline-input';
+  const input = document.createElement('input');
+  input.type='text';
+  input.placeholder = 'Type your name and press Enter';
+  const addBtn = document.createElement('button');
+  addBtn.className='small-btn';
+  addBtn.textContent='Add';
+  const cancel = document.createElement('button');
+  cancel.className='small-btn';
+  cancel.textContent='Cancel';
+  wrapper.appendChild(input); wrapper.appendChild(addBtn); wrapper.appendChild(cancel);
+  parent.appendChild(wrapper);
+  input.focus();
+  function close(){
+    wrapper.remove();
+    joinBtn._open = false;
+  }
+  addBtn.addEventListener('click', ()=> {
+    const name = input.value.trim();
+    if(!name) return alert('Type a name');
+    addPlayer(gameIndex, name);
+    close();
+  });
+  cancel.addEventListener('click', close);
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){
+      addBtn.click();
+    } else if(e.key === 'Escape'){
+      close();
+    }
+  });
+}
+
+function addPlayer(gameIndex, name){
+  if(!data[gameIndex].players) data[gameIndex].players = [];
+  data[gameIndex].players.push(name);
+  saveData();
+  renderBoard(document.getElementById('filterInput').value || '');
+}
+
+// Helpers
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+// Filter
+document.getElementById('filterInput').addEventListener('input', (e)=> renderBoard(e.target.value));
+document.getElementById('clearFilter').addEventListener('click', ()=> {document.getElementById('filterInput').value=''; renderBoard('')});
+
+// Export CSV
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const rows = [['name','votes','players','img']];
+  data.forEach(g=>{
+    rows.push([escapeCsv(g.name), g.votes, escapeCsv((g.players||[]).join(';')), escapeCsv(g.img||'')]);
+  });
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'games-board.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Import CSV
+document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ev =>{
+    const txt = ev.target.result;
+    parseCsvImport(txt);
+    document.getElementById('fileInput').value = '';
+  };
+  reader.readAsText(f);
+});
+
+function parseCsvImport(txt){
+  // very small csv parser
+  const lines = txt.split(/\r?\n/).filter(Boolean);
+  if(lines.length <= 1) return alert('CSV looks empty or only header');
+  const header = lines[0].split(',').map(h=>h.trim().toLowerCase());
+  const nameIdx = header.indexOf('name');
+  const votesIdx = header.indexOf('votes');
+  const playersIdx = header.indexOf('players');
+  const imgIdx = header.indexOf('img');
+  if(nameIdx === -1 || votesIdx === -1){
+    return alert('CSV needs at least columns: name,votes');
+  }
+  const imported = [];
+  for(let i=1;i<lines.length;i++){
+    const cols = splitCsvLine(lines[i]);
+    const nm = cols[nameIdx] || 'Unknown';
+    const vt = parseInt(cols[votesIdx]||'0',10) || 0;
+    const players = playersIdx >=0 ? (cols[playersIdx]?cols[playersIdx].split(';').map(s=>s.trim()).filter(Boolean):[]) : [];
+    const img = (imgIdx>=0 ? cols[imgIdx] : '') || null;
+    imported.push({name:nm, votes:vt, players:players, img:img});
+  }
+  if(imported.length) {
+    data = imported;
+    saveData();
+    renderBoard();
+    alert('Imported '+imported.length+' rows.');
+  }
+}
+
+function splitCsvLine(line){
+  // naive split that handles simple quoted values
+  const out=[]; let cur='', inq=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch === '"' ){ inq = !inq; continue; }
+    if(ch === ',' && !inq){ out.push(cur); cur=''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+function escapeCsv(v){
+  if(v == null) return '';
+  const s = String(v);
+  if(s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g,'""')}"`;
+  return s;
+}
+
+// Reset
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(!confirm('Reset stored players and images? This clears local changes (localStorage).')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  data = loadData();
+  renderBoard();
+});
+
+// RAWG Fetch images
+document.getElementById('fetchImages').addEventListener('click', async ()=>{
+  const key = document.getElementById('rawgKey').value.trim();
+  if(!key){ if(!confirm('No RAWG key provided. This will attempt unauthenticated calls which might be limited. Continue?')) return; }
+  await fetchImagesFromRAWG(key || null);
+});
+
+async function fetchImagesFromRAWG(key){
+  const boardEl = document.getElementById('board');
+  const original = [...data];
+  for(let i=0;i<data.length;i++){
+    const g = data[i];
+    try{
+      // RAWG search endpoint: https://api.rawg.io/api/games?search=<name>&key=<key>
+      const q = encodeURIComponent(g.name);
+      const url = key ? `https://api.rawg.io/api/games?search=${q}&key=${key}` : `https://api.rawg.io/api/games?search=${q}`;
+      const resp = await fetch(url);
+      if(!resp.ok) { console.warn('rawg fetch failed for', g.name, resp.status); continue; }
+      const json = await resp.json();
+      if(json && json.results && json.results.length){
+        const first = json.results[0];
+        // RAWG provides 'background_image' which is usable for cards
+        if(first.background_image){
+          data[i].img = first.background_image;
+          // small delay to be friendlier
+          await sleep(150);
+          renderBoard(document.getElementById('filterInput').value || '');
+        }
+      }
+    }catch(err){
+      console.warn('rawg error', err);
+    }
+  }
+  saveData();
+  alert('Image fetch attempt finished. Some games might not have images or RAWG rate-limited requests.');
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ---------- on load ----------
+updateStats();
+</script>
+</body>
+</html>
