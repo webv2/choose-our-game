@@ -42,7 +42,7 @@
   .join-form-buttons .small-btn { flex-grow: 1; }
   .join:active {
   transform: scale(0.97);
-  filter: brightness(0.9); 
+  filter: brightness(0.9);
   }
   input[type="text"]{background:transparent;border:1px solid rgba(255,255,255,0.04); padding:8px;border-radius:8px;color:inherit; outline:none; width:100%; box-sizing: border-box;}
   .toolbar{display:flex; gap:8px; margin-bottom:12px; align-items:center}
@@ -50,6 +50,69 @@
   .pill{background:rgba(255,255,255,0.02); padding:6px 10px;border-radius:999px; font-size:13px; color:var(--muted)}
   .img-fallback{width:100%;height:100%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; letter-spacing:0.6px}
   footer{margin-top:18px; font-size:13px; color:var(--muted)}
+
+  /* --- MODAL STYLES --- */
+  .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(5px);
+  }
+  .modal-content {
+      background: var(--card); padding: 24px; border-radius: 12px;
+      width: 90%; max-width: 800px; max-height: 85vh;
+      overflow-y: auto; position: relative;
+      border: 1px solid rgba(255,255,255,0.05);
+  }
+  .modal-close {
+      position: absolute; top: 10px; right: 15px; font-size: 28px;
+      color: var(--muted); cursor: pointer;
+  }
+  .modal-content h2 {
+      margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 12px; margin-bottom: 16px;
+  }
+  .modal-body { display: grid; gap: 20px; }
+  .group-entry { background: var(--glass); border-radius: 8px; overflow: hidden; }
+  .group-banner {
+      width: 100%; height: 150px; object-fit: cover; display: block;
+      background-color: #071023; /* fallback color */
+  }
+  .group-info { padding: 12px 16px 16px; }
+  .group-info h3 { margin: 0 0 12px 0; font-size: 18px; }
+
+  /* --- NEW "FANCIER" PLAYER STYLES --- */
+  .group-players {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px; /* Spacing between badges */
+  }
+  #groupsModalBody .player {
+      font-size: 16px; /* Bigger */
+      font-weight: 600; /* Bolder */
+      background: linear-gradient(145deg, rgba(79, 70, 229, 0.2), rgba(79, 70, 229, 0.1)); /* Fancier background */
+      border: 1px solid rgba(79, 70, 229, 0.4); /* Accent border */
+      padding: 8px 14px;
+      border-radius: 8px; /* Modern tag shape */
+      color: #cdd8e5; /* Brighter text */
+      text-shadow: 0 0 4px rgba(0,0,0,0.5); /* Depth */
+      display: inline-flex;
+      align-items: center;
+      gap: 8px; /* Space between icon and name */
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin: 0; /* Override default margin */
+  }
+  #groupsModalBody .player:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+  }
+  #groupsModalBody .player svg {
+      width: 18px;
+      height: 18px;
+      opacity: 0.7;
+      fill: currentColor;
+  }
+
 </style>
 </head>
 <body>
@@ -59,6 +122,7 @@
     <h1>Choose Our Game — Assemble Groups</h1>
     <div class="controls">
       <div class="pill" id="stats">Loading...</div>
+      <button class="small-btn" id="showGroupsBtn">See current groups</button>
     </div>
   </header>
 
@@ -75,6 +139,17 @@
     <div>Usage: Click <strong>Join</strong> on a game card and type your name. Changes are saved to the database and are visible to everyone in real-time.</div>
   </footer>
 </div>
+
+<div id="groupsModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <span class="modal-close">&times;</span>
+    <h2>Current Gaming Groups</h2>
+    <div id="groupsModalBody" class="modal-body">
+      <!-- Groups will be dynamically inserted here -->
+    </div>
+  </div>
+</div>
+
 
 <script>
 /*
@@ -103,6 +178,13 @@ const initialGames = [
   {game_name:"Borderlands 2", votes:2}, {game_name:"Terraria", votes:2}
 ];
 
+// --- MODAL ELEMENT SELECTORS ---
+const showGroupsBtn = document.getElementById('showGroupsBtn');
+const groupsModal = document.getElementById('groupsModal');
+const closeGroupsModalBtn = groupsModal.querySelector('.modal-close');
+const groupsModalBody = document.getElementById('groupsModalBody');
+
+
 // --- CORE FUNCTIONS ---
 
 function updateStats(){
@@ -116,11 +198,11 @@ function renderBoard(filter = ''){
   const currentFilter = filter.toLowerCase();
   board.innerHTML = '';
   const list = gameData.filter(g => g.game_name.toLowerCase().includes(currentFilter));
-  
+
   list.forEach(game => {
     const card = document.createElement('div');
     card.className = 'card';
-    
+
     const cover = document.createElement('div');
     cover.className = 'cover';
     if(game.img){
@@ -132,10 +214,10 @@ function renderBoard(filter = ''){
     } else {
       cover.innerHTML = fallbackCoverHTML(game);
     }
-    
+
     const meta = document.createElement('div');
     meta.className = 'meta';
-    
+
     const titleRow = document.createElement('div');
     titleRow.className = 'title-row';
     const title = document.createElement('div');
@@ -143,7 +225,7 @@ function renderBoard(filter = ''){
     const votes = document.createElement('div');
     votes.className = 'votes'; votes.textContent = `${game.votes} votes`;
     titleRow.appendChild(title); titleRow.appendChild(votes);
-    
+
     const playersDiv = document.createElement('div');
     playersDiv.className = 'players';
     if(game.players && game.players.length){
@@ -156,7 +238,7 @@ function renderBoard(filter = ''){
     } else {
       playersDiv.innerHTML = `<div style="color:var(--muted)">No players yet</div>`;
     }
-    
+
     const actions = document.createElement('div');
     actions.className = 'actions';
     const joinBtn = document.createElement('button');
@@ -187,7 +269,7 @@ async function addPlayer(gameName, playerName) {
         .from('game_groups')
         .update({ players: game.players })
         .eq('game_name', gameName);
-    
+
     if (error) {
         console.error("Error adding player:", error);
         game.players.pop();
@@ -195,6 +277,63 @@ async function addPlayer(gameName, playerName) {
         alert("Failed to save your name. Please try again.");
     }
 }
+
+// --- UPDATED FUNCTION TO SHOW GROUPS MODAL ---
+function showGroups() {
+    const activeGroups = gameData.filter(game => game.players && game.players.length > 0);
+    groupsModalBody.innerHTML = '';
+
+    if (activeGroups.length === 0) {
+        groupsModalBody.innerHTML = '<p>No groups have been formed yet. Join a game to start one!</p>';
+        groupsModal.style.display = 'flex';
+        return;
+    }
+
+    activeGroups.forEach(game => {
+        const groupEntry = document.createElement('div');
+        groupEntry.className = 'group-entry';
+
+        const bannerImg = document.createElement('img');
+        bannerImg.className = 'group-banner';
+        bannerImg.src = game.img || '';
+        bannerImg.alt = `${game.game_name} banner`;
+        bannerImg.onerror = () => {
+            const fallback = document.createElement('div');
+            fallback.className = 'img-fallback group-banner';
+            fallback.style.height = '150px';
+            fallback.innerHTML = fallbackCoverHTML(game).replace('style="', `style="height:100%;`);
+            bannerImg.replaceWith(fallback);
+        };
+
+        const groupInfo = document.createElement('div');
+        groupInfo.className = 'group-info';
+
+        const title = document.createElement('h3');
+        title.textContent = game.game_name;
+
+        const playersContainer = document.createElement('div');
+        playersContainer.className = 'group-players';
+
+        // UPDATED PLAYER BADGE CREATION
+        const userIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2.5a5.5 5.5 0 0 1 5.5 5.5c0 1.57-.67 3-1.75 3.95A9.006 9.006 0 0 1 21 21.5a.5.5 0 0 1-1 0 7.98 7.98 0 0 0-16 0 .5.5 0 0 1-1 0 9.006 9.006 0 0 1 5.25-9.55A5.5 5.5 0 0 1 6.5 8 5.5 5.5 0 0 1 12 2.5zM8.5 8a3.5 3.5 0 1 0 7 0 3.5 3.5 0 0 0-7 0z"></path></svg>`;
+        game.players.forEach(player => {
+            const playerBadge = document.createElement('div');
+            playerBadge.className = 'player';
+            playerBadge.innerHTML = `${userIconSVG}<span>${escapeHtml(player)}</span>`;
+            playersContainer.appendChild(playerBadge);
+        });
+
+        groupInfo.appendChild(title);
+        groupInfo.appendChild(playersContainer);
+        groupEntry.appendChild(bannerImg);
+        groupEntry.appendChild(groupInfo);
+
+        groupsModalBody.appendChild(groupEntry);
+    });
+
+    groupsModal.style.display = 'flex';
+}
+
 
 // --- UI AND HELPER FUNCTIONS ---
 
@@ -211,12 +350,12 @@ function openJoinInline(gameName, joinBtn){
 
   const buttonRow = document.createElement('div');
   buttonRow.className = 'join-form-buttons';
-  
+
   const addBtn = document.createElement('button');
   addBtn.className = 'small-btn'; addBtn.textContent = 'Add';
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'small-btn'; cancelBtn.textContent = 'Cancel'; cancelBtn.name = 'cancel';
-  
+
   buttonRow.appendChild(addBtn); buttonRow.appendChild(cancelBtn);
 
   const input = document.createElement('input');
@@ -289,14 +428,14 @@ async function fetchAllImagesConcurrently(key) {
 async function initializeBoard() {
     try {
         const { data, error } = await supabaseClient.from('game_groups').select('*');
-        
+
         if (error) throw error;
 
         if (data.length === 0) {
             console.log('Database is empty, seeding with initial games...');
             const { error: insertError } = await supabaseClient.from('game_groups').insert(initialGames);
             if (insertError) throw insertError;
-            
+
             const { data: newData } = await supabaseClient.from('game_groups').select('*');
             gameData = newData || [];
         } else {
@@ -310,7 +449,7 @@ async function initializeBoard() {
                 const record = payload.new || {};
                 const key = record.game_name || (payload.old && payload.old.game_name);
                 if (!key) return;
-                
+
                 const index = gameData.findIndex(g => g.game_name === key);
 
                 if (payload.eventType === 'DELETE') {
@@ -339,6 +478,18 @@ document.getElementById('clearFilter').addEventListener('click', ()=> {
     document.getElementById('filterInput').value='';
     renderBoard('');
 });
+
+// --- MODAL EVENT LISTENERS ---
+showGroupsBtn.addEventListener('click', showGroups);
+closeGroupsModalBtn.addEventListener('click', () => {
+    groupsModal.style.display = 'none';
+});
+groupsModal.addEventListener('click', (e) => {
+    if (e.target === groupsModal) {
+        groupsModal.style.display = 'none';
+    }
+});
+
 
 // --- START THE APP ---
 initializeBoard();
